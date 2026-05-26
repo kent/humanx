@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">HumanX app icon</title>
+  <desc id="desc">A HumanX shield mark on a green and ivory background.</desc>
+  <rect width="1024" height="1024" fill="#12805c"/>
+  <path d="M158 210c120-42 228-91 354-91s234 49 354 91v247c0 206-139 370-354 448-215-78-354-242-354-448V210Z" fill="#fffdf7"/>
+  <path d="M235 269c95-33 180-70 277-70s182 37 277 70v195c0 164-110 294-277 360-167-66-277-196-277-360V269Z" fill="#12805c"/>
+  <path d="M358 353h104l58 92 58-92h99L574 509l110 166H580l-66-103-66 103h-99l111-166-102-156Z" fill="#fffdf7"/>
+</svg>

@@ -1,0 +1,7 @@
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
+blockExoticSubdeps: false
+overrides:
+  postcss: 8.5.15
+  ws: 8.21.0

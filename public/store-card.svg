@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1035" height="720" viewBox="0 0 1035 720" role="img" aria-labelledby="title desc">
+  <title id="title">HumanX content card source</title>
+  <desc id="desc">Source artwork sized for a 345 by 240 content card exported at 3x.</desc>
+  <rect width="1035" height="720" fill="#f7f5ef"/>
+  <rect x="90" y="82" width="855" height="520" rx="24" fill="#fffdf7" stroke="#ddd7ca" stroke-width="6"/>
+  <path d="M222 198c69-24 130-51 202-51s133 27 202 51v137c0 119-80 215-202 262-122-47-202-143-202-262V198Z" fill="#12805c"/>
+  <path d="M334 259h70l39 62 39-62h67l-70 106 75 113h-70l-45-70-45 70h-67l75-113-68-106Z" fill="#fffdf7"/>
+  <path d="M648 213h178" stroke="#151515" stroke-width="24" stroke-linecap="round"/>
+  <path d="M648 286h126" stroke="#12805c" stroke-width="24" stroke-linecap="round"/>
+  <path d="M648 359h214" stroke="#151515" stroke-width="24" stroke-linecap="round"/>
+  <path d="M0 438h1035v282H0z" fill="#12805c" opacity=".14"/>
+</svg>
