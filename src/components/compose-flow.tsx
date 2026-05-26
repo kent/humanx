@@ -308,7 +308,7 @@ export default function ComposeFlow() {
           </div>
         ) : null}
 
-        {proofResult ? (
+        {proofResult && signedIn ? (
           <section className="surface mt-5 p-4">
             <p className="text-sm font-black text-[var(--accent)]">Last proof is ready</p>
             <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-[var(--muted)]">
