@@ -111,9 +111,10 @@ export default function ComposeFlow() {
   const normalizedLength = validation.ok ? validation.normalized.length : text.trim().length;
   const charactersLeft = (config?.maxPostTextLength ?? 220) - normalizedLength;
   const signedIn = status === "authenticated";
-  const busy = phase === "signing_world" || phase === "creating_proof" || status === "loading";
-  const canPost = Boolean(signedIn && config?.hasWorldConfig && validation.ok && !busy);
   const username = session?.user?.username;
+  const hasXUsername = Boolean(username);
+  const busy = phase === "signing_world" || phase === "creating_proof" || status === "loading";
+  const canPost = Boolean(signedIn && hasXUsername && config?.hasWorldConfig && validation.ok && !busy);
   const canShowLastProof = Boolean(proofResult && signedIn && username && proofResult.proof.xUsername === username);
 
   const startXLogin = useCallback(() => {
@@ -123,6 +124,11 @@ export default function ComposeFlow() {
 
   const startPost = useCallback(async () => {
     if (!config || !signedIn) return;
+    if (!username) {
+      setError("X login did not include a username. Sign out and log in with X again.");
+      setPhase("error");
+      return;
+    }
 
     const nextValidation = validatePostText(text);
     if (!nextValidation.ok) {
@@ -157,7 +163,7 @@ export default function ComposeFlow() {
       setError(postError instanceof Error ? postError.message : "World verification could not start.");
       setPhase("error");
     }
-  }, [config, signedIn, text]);
+  }, [config, signedIn, text, username]);
 
   const handleVerify = useCallback(
     async (result: IDKitResult) => {
@@ -292,6 +298,13 @@ export default function ComposeFlow() {
           <div className="status-line status-warn mt-4 flex gap-2">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
             <span>World ID signing needs Developer Portal credentials.</span>
+          </div>
+        ) : null}
+
+        {signedIn && !hasXUsername ? (
+          <div className="status-line status-warn mt-4 flex gap-2">
+            <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
+            <span>X login needs a username. Sign out and log in again.</span>
           </div>
         ) : null}
 

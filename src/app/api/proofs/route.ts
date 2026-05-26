@@ -24,6 +24,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw new ApiError(401, "x_login_required", "Login with X before posting.");
     }
 
+    const xUsername = session.user.username?.trim();
+    if (!xUsername) {
+      throw new ApiError(401, "x_username_required", "Login with X again before posting.");
+    }
+
     const body = requestSchema.parse(await request.json());
     const text = validatePostText(body.draftText);
     if (!text.ok) {
@@ -44,7 +49,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       draftHash: text.draftHash,
       signal: text.signal,
       signalHash,
-      xUsername: session.user.username,
+      xUsername,
       nullifierDecimal: worldVerification.nullifierDecimal,
       worldVerification: {
         verifiedAt: worldVerification.verifiedAt,
