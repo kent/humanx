@@ -17,6 +17,7 @@ The app will run as a World Mini App. World documentation states that Mini Apps 
 | Goal | Requirement |
 |---|---|
 | World-native mobile experience | The first screen is the usable compose flow, designed for World App webview constraints and mobile ergonomics. |
+| X login gate | A user must login with X before a proof can be created for a post. |
 | World ID proof | A user can verify with World ID through IDKit before a proof is issued. |
 | Backend verification | The server generates RP signatures, forwards IDKit responses to the World Developer Portal verifier, and never trusts client-only proof state. |
 | Exact post binding | The proof binds to a normalized post text hash through IDKit `signal`, and the backend checks the returned `signal_hash`. |
@@ -29,7 +30,7 @@ The app will run as a World Mini App. World documentation states that Mini Apps 
 
 | Non-Goal | Reason |
 |---|---|
-| X account ownership proof in v1 | No X OAuth/API credentials are present. V1 uses X Web Intent, which lets the user post manually but does not return a cryptographic account binding. |
+| Final X post verification in v1 | X login gates proof creation, but X Web Intent does not return a posted tweet id to the app. |
 | Automatic posting to X | Requires X API credentials and user OAuth consent. The app should be structured so OAuth can be added later. |
 | On-chain proof publication | The current goal can be satisfied by backend verification and a public proof page. |
 | Paid flows, tokens, rewards, or subscriptions | These are unrelated to the proof-of-human posting goal and create avoidable review/compliance risk. |
@@ -61,6 +62,10 @@ The repository starts with only `GOALS.md`. There is no existing application, fr
 | `WORLD_ID_ACTION` | Server/client derived | No | Defaults to `humanx-tweet-proof`. |
 | `WORLD_ID_ENVIRONMENT` | Server/client derived | No | `production` by default, `staging` for simulator testing. |
 | `NEXT_PUBLIC_APP_URL` | Server/client | Recommended | Absolute app origin for proof URLs. Falls back to request origin. |
+| `NEXTAUTH_URL` | Server | Yes for production login | Production app origin for Auth.js redirects. |
+| `NEXTAUTH_SECRET` | Server | Yes for X login | Server-only Auth.js session secret. |
+| `X_CLIENT_ID` | Server | Yes for X login | X OAuth 2.0 client id. |
+| `X_CLIENT_SECRET` | Server | Yes for X login | X OAuth 2.0 client secret. |
 | `HUMANX_DATA_FILE` | Server | No | File-backed local proof store path. Defaults to `.data/proofs.json`. |
 | `SUPPORT_EMAIL` | Server/client | Recommended for submission | Public support contact for World App Store review and user support. |
 
@@ -76,7 +81,7 @@ The implementation must be ready for Developer Portal submission after productio
 | Complete and accurate app information | Include suggested app name, short description, support email variable, icon/card asset requirements, and proof-flow description in `WORLD_APP_STORE.md`. |
 | Mobile-first and reliable | Avoid footers, sidebars, hamburger menus, infinite loading, unsupported platform-only features, and popup-dependent flows. |
 | Branding | Do not use the World logo, modified World logo, or the word "official" in app name, metadata, or UI. |
-| Data consent | State what is stored before proof creation: post text, proof commitment, verification timestamp, and optional X URL. Do not store personal identity data. |
+| Data consent | State what is stored before proof creation: post text, proof commitment, verification timestamp, and X username. Do not store personal identity data beyond the user-provided/authenticated posting context. |
 | Platform compliance | No payments, gambling/chance mechanics, token presales, memberships/yield, or NFT purchase CTAs in v1. |
 | Support | Provide a support contact for the app store listing. |
 
@@ -85,15 +90,13 @@ The implementation must be ready for Developer Portal submission after productio
 ### 3.1 Primary Flow
 
 1. User opens HumanX in World App or a mobile browser preview.
-2. User writes the post text in the compose screen.
-3. Client normalizes the text and computes a draft hash.
+2. User logs in with X.
+3. User enters the post text and presses "Post".
 4. Client requests an RP signature from `/api/world/rp-signature`.
-5. User completes IDKit verification.
+5. User completes World ID verification through IDKit.
 6. Client submits the IDKit result and draft text to `/api/proofs`.
-7. Backend verifies the proof with World, checks the expected signal hash, stores the proof claim, and returns a public proof URL plus an edit token.
-8. User taps "Post on X", which opens the X Web Intent in the same webview/window.
-9. User posts manually on X.
-10. User may return and paste the final X post URL, using the edit token to attach it to the proof page.
+7. Backend verifies the proof with World, checks the expected signal hash, stores the proof claim with the X username, and returns a public proof URL plus an X intent URL.
+8. The app opens the X Web Intent in the same webview/window with the post text and proof URL.
 
 ### 3.2 Public Proof Page
 
@@ -102,10 +105,10 @@ The public proof page must show:
 | Field | Public Display |
 |---|---|
 | Verification state | Verified human proof created at timestamp. |
+| X login | Display the X username when available. |
 | Post text | The exact normalized text the proof was created for. |
 | Text digest | Short digest for tamper-evident comparison. |
 | Proof id | HumanX proof id. |
-| X post URL | Displayed only if the creator attached one. |
 | Privacy note | Explain that World ID verifies humanness without revealing identity. |
 
 The page must not publicly display the full World ID nullifier. It may display a short proof commitment derived from the nullifier, proof id, and draft hash.
@@ -137,32 +140,27 @@ type ProofClaim = {
   signal: string;
   signalHash: string;
   proofCommitment: string;
+  xUsername?: string;
   nullifierDecimal: string;
   worldVerification: {
     verifiedAt: string;
     resultCode?: string;
     sessionId?: string;
   };
-  xPostUrl?: string;
   createdAt: string;
   updatedAt: string;
 };
 ```
 
-### 4.2 Edit Token
-
-The proof creation response returns a one-time creator capability:
+### 4.2 Proof Creation Response
 
 ```ts
 type ProofCreationResponse = {
   proof: PublicProof;
   proofUrl: string;
   tweetIntentUrl: string;
-  editToken: string;
 };
 ```
-
-The server stores only a SHA-256 hash of the edit token. The token is required to attach or update the X post URL.
 
 ### 4.3 Text Normalization
 
@@ -199,8 +197,6 @@ using World ID's documented hash-to-field algorithm: Keccak-256 of the input byt
 |---|---|---|---|
 | `/api/world/rp-signature` | POST | Node.js | Validate action, generate RP signature with `WORLD_RP_SIGNING_KEY`, return `rp_context`. |
 | `/api/proofs` | POST | Node.js | Verify IDKit result, create proof claim, return proof URL and X intent URL. |
-| `/api/proofs/[id]` | GET | Node.js | Return public proof JSON. |
-| `/api/proofs/[id]` | PATCH | Node.js | Attach or update X post URL using edit token. |
 | `/proof/[id]` | GET | Server page | Render public proof page. |
 
 ### 5.2 RP Signature Route
@@ -292,12 +288,11 @@ Use:
 
 | State | UI Behavior |
 |---|---|
-| `editing` | Text area enabled, verify action available when valid. |
-| `config_missing` | Verification disabled with configuration status. |
-| `requesting_signature` | Button disabled, inline spinner/status. |
-| `awaiting_world` | IDKit widget open or waiting for user confirmation. |
+| `loading` | Configuration/session state is being fetched. |
+| `ready` | X login, text entry, and the single Post action are available as configuration allows. |
+| `signing_world` | Button disabled while the app requests an RP signature and opens IDKit. |
 | `creating_proof` | Backend verification in progress. |
-| `proof_ready` | Show proof URL, X post action, copy action, and optional post URL attach form. |
+| `proof_ready` | Store the last proof locally and open X with the proof URL attached. |
 | `error` | Inline error with retry path. |
 
 ### 6.3 X Intent Behavior
@@ -318,9 +313,8 @@ The app must navigate in the same window using `window.location.assign(tweetInte
 | Client changes post text after proof | Proof page shows normalized text and digest; signal hash is checked against the normalized text. |
 | Leaked signing key | Signing key is server-only and must never be bundled into client code. |
 | Nullifier public correlation | Do not expose full nullifier on proof pages. |
-| Proof mutation by third party | X post URL edits require an edit token; only token hash is stored. |
 | Duplicate proof spam for same text by same human | Store unique `(nullifierDecimal, draftHash)`. |
-| Misleading claim about X ownership | UI and proof page must avoid claiming OAuth-backed account ownership in v1. |
+| Misleading claim about X ownership | UI and proof page may state the user logged in with X, but must not claim HumanX verified the final tweet id. |
 | Popup failure in World webview | Use same-window X intent navigation. |
 
 ## 8. Failure Modes and Recovery
@@ -332,7 +326,6 @@ The app must navigate in the same window using `window.location.assign(tweetInte
 | World verifier failure | Inline error | Do not store proof; include non-sensitive status. |
 | Signal mismatch | Inline integrity error | Reject request; log server-side reason. |
 | Duplicate proof | Show existing proof | Return `200` with existing proof instead of creating duplicates. |
-| Invalid X URL patch | Inline validation error | Keep proof unchanged. |
 | File store unavailable | Service error | Return `503 storage_error`; do not claim proof creation. |
 
 ## 9. Verification Loop
@@ -371,15 +364,15 @@ Implementation must complete this loop before moving the manifest to `done`:
 ## 10. Definition of Done
 
 - [ ] Next.js mobile-first app exists and runs locally.
+- [ ] X login is required before proof creation.
 - [ ] MiniKit provider is installed at app root.
 - [ ] IDKit verification flow is wired with backend RP signatures.
 - [ ] Backend proof creation verifies through World API and checks signal binding.
 - [ ] Public proof pages render from stored claims.
 - [ ] X Web Intent uses proof URL and same-window navigation.
-- [ ] X post URL can be attached with an edit token.
 - [ ] Secrets are documented in `.env.example`.
 - [ ] World App Store submission guidance is documented in `WORLD_APP_STORE.md`.
-- [ ] Unit tests cover normalization, signal hashing, X intent URLs, URL validation, and store behavior.
+- [ ] Unit tests cover normalization, signal hashing, X intent URLs, goal contract, and store behavior.
 - [ ] Lint, typecheck, tests, build, and Spectacula validation pass or any blocker is explicitly recorded.
 - [ ] Manifest records self-review result.
 
@@ -390,7 +383,7 @@ Implementation must complete this loop before moving the manifest to `done`:
 | Assumption | Impact |
 |---|---|
 | The intended mobile surface is a World Mini App, not a native iOS/Android binary. | Build as web app for World App webview. |
-| V1 can use X Web Intent instead of X OAuth/API posting. | Users manually confirm the post; the app cannot verify X account ownership. |
+| V1 can use X Web Intent instead of X API posting. | Users manually confirm the post; the app cannot verify the resulting tweet id. |
 | A file store is acceptable for local MVP verification. | Production needs a durable database before public launch. |
 | The Developer Portal will provide app id, RP id, and signing key out-of-band. | Real World ID verification cannot run until env vars are supplied. |
 | Store listing assets are not yet designed. | Build must document required app icon and content-card assets but cannot generate final brand-approved assets without design input. |

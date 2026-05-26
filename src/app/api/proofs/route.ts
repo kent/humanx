@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { z } from "zod";
 
+import { authOptions } from "@/lib/auth";
 import { getRequestOrigin, getWorldServerConfig } from "@/lib/config";
 import { ApiError, errorResponse } from "@/lib/http";
 import { createOrRefreshProof } from "@/lib/proofs";
@@ -17,6 +19,11 @@ const requestSchema = z.object({
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new ApiError(401, "x_login_required", "Login with X before posting.");
+    }
+
     const body = requestSchema.parse(await request.json());
     const text = validatePostText(body.draftText);
     if (!text.ok) {
@@ -37,6 +44,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       draftHash: text.draftHash,
       signal: text.signal,
       signalHash,
+      xUsername: session.user.username,
       nullifierDecimal: worldVerification.nullifierDecimal,
       worldVerification: {
         verifiedAt: worldVerification.verifiedAt,
@@ -51,7 +59,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       proof: result.proof,
       proofUrl,
       tweetIntentUrl: buildXIntentUrl(text.normalized, proofUrl),
-      editToken: result.editToken,
       createdNew: result.createdNew,
     });
   } catch (error) {

@@ -1,4 +1,5 @@
 import { WORLD_ID_ACTION_DEFAULT } from "@/lib/text";
+import { hasXAuthConfig } from "@/lib/auth";
 
 export type WorldEnvironment = "production" | "staging";
 
@@ -19,6 +20,7 @@ export type PublicAppConfig = {
   appUrl: string;
   supportEmail: string;
   hasWorldConfig: boolean;
+  hasXAuthConfig: boolean;
   maxPostTextLength: number;
 };
 
@@ -40,6 +42,10 @@ export function getWorldServerConfig(origin = ""): WorldServerConfig {
 
 export function hasWorldVerificationConfig(config: WorldServerConfig): boolean {
   return Boolean(config.appId && config.rpId && config.rpSigningKey);
+}
+
+export function hasXLoginConfig(): boolean {
+  return hasXAuthConfig();
 }
 
 export function missingWorldConfig(config: WorldServerConfig): string[] {

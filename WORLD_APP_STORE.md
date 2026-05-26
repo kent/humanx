@@ -22,6 +22,10 @@ Do not use "official" in the listing or UI. Do not use the World logo or a modif
 - `WORLD_ID_ACTION=humanx-tweet-proof`
 - `WORLD_ID_ENVIRONMENT=production`
 - `NEXT_PUBLIC_APP_URL=https://<production-host>`
+- `NEXTAUTH_URL=https://<production-host>`
+- `NEXTAUTH_SECRET=<strong-random-secret>`
+- `X_CLIENT_ID=<x-oauth-client-id>`
+- `X_CLIENT_SECRET=<x-oauth-client-secret>`
 - `SUPPORT_EMAIL=<public-support-email>`
 
 Production storage should replace the local file store with a durable database before a public launch.
@@ -39,17 +43,16 @@ Export final PNGs without metadata before Developer Portal submission.
 
 1. Open the production HTTPS URL from the Developer Portal Mini App tester.
 2. Confirm the app loads without footer, sidebar, hamburger menu, or infinite loading.
-3. Enter a short X post.
-4. Accept the proof publication checkbox.
-5. Complete World ID verification through IDKit.
-6. Confirm a public proof page is created.
-7. Use "Post on X" and confirm it opens X in the same webview/window.
-8. Paste the resulting X post URL back into the proof form.
-9. Open the public proof page and confirm it shows the post text, digest, timestamp, and X link.
+3. Tap "Login with X" and complete X OAuth.
+4. Enter a short X post.
+5. Tap "Post" and complete World ID verification through IDKit.
+6. Confirm X opens in the same webview/window with the proof URL attached.
+7. Open the public proof page and confirm it shows the post text, X username, digest, timestamp, and commitment.
 
 ## Current Submission Blockers
 
 - Real Developer Portal app id, RP id, and signing key are required for live verification.
+- X OAuth 2.0 client id/secret and Auth.js secret are required for X login.
 - Production HTTPS hosting URL is required.
 - Public support email is required.
 - Final PNG store assets should be exported from the provided SVG sources or replaced by approved brand assets.

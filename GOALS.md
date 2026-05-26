@@ -1,7 +1,9 @@
 # humanx
 
-## Goal
+## User Stories
 
-Build an app that uses the World ID verification system to let verified humans tweet to X and publish proof that the user who posted is a verified human.
-
-The app should make it possible for only verified humans to prove that they tweeted a given post, creating a trend where users share this proof so other people can know that a human posted the transaction.
+1. Load app.
+2. Login with X.
+3. Press post and enter text to post.
+4. Sign with World ID.
+5. Post tweet with verified human proof.

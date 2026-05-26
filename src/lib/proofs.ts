@@ -4,7 +4,6 @@ import { createHash, randomBytes } from "node:crypto";
 
 import type { WorldEnvironment } from "@/lib/config";
 import { ApiError } from "@/lib/http";
-import { normalizeXPostUrl } from "@/lib/x";
 
 export type ProofClaim = {
   id: string;
@@ -16,20 +15,18 @@ export type ProofClaim = {
   signal: string;
   signalHash: string;
   proofCommitment: string;
+  xUsername?: string;
   nullifierDecimal: string;
   worldVerification: {
     verifiedAt: string;
     resultCode?: string;
     sessionId?: string;
   };
-  xPostUrl?: string;
   createdAt: string;
   updatedAt: string;
 };
 
-export type StoredProofClaim = ProofClaim & {
-  editTokenHash: string;
-};
+export type StoredProofClaim = ProofClaim;
 
 export type PublicProof = Omit<ProofClaim, "nullifierDecimal">;
 
@@ -44,6 +41,7 @@ export type CreateProofInput = {
   draftHash: string;
   signal: string;
   signalHash: string;
+  xUsername?: string;
   nullifierDecimal: string;
   worldVerification: ProofClaim["worldVerification"];
 };
@@ -64,14 +62,6 @@ export function getStorePath(): string {
   return path.join(process.cwd(), ".data", fileName);
 }
 
-export function makeEditToken(): string {
-  return `hxe_${randomBytes(32).toString("base64url")}`;
-}
-
-export function hashEditToken(editToken: string): string {
-  return createHash("sha256").update(editToken).digest("hex");
-}
-
 export function createProofId(): string {
   return `hx_${randomBytes(10).toString("base64url")}`;
 }
@@ -83,7 +73,6 @@ export function createProofCommitment(id: string, nullifierDecimal: string, draf
 export function toPublicProof(proof: StoredProofClaim | ProofClaim): PublicProof {
   const publicProof = { ...proof } as Partial<StoredProofClaim>;
   delete publicProof.nullifierDecimal;
-  delete publicProof.editTokenHash;
   return publicProof as PublicProof;
 }
 
@@ -121,23 +110,20 @@ export async function writeProofStore(store: ProofStore): Promise<void> {
 
 export async function createOrRefreshProof(input: CreateProofInput): Promise<{
   proof: PublicProof;
-  editToken: string;
   createdNew: boolean;
 }> {
   const store = await readProofStore();
   const now = new Date().toISOString();
-  const editToken = makeEditToken();
-  const editTokenHash = hashEditToken(editToken);
   const duplicate = store.proofs.find(
     (proof) => proof.nullifierDecimal === input.nullifierDecimal && proof.draftHash === input.draftHash,
   );
 
   if (duplicate) {
-    duplicate.editTokenHash = editTokenHash;
     duplicate.updatedAt = now;
+    duplicate.xUsername = input.xUsername;
     duplicate.worldVerification = input.worldVerification;
     await writeProofStore(store);
-    return { proof: toPublicProof(duplicate), editToken, createdNew: false };
+    return { proof: toPublicProof(duplicate), createdNew: false };
   }
 
   const id = createProofId();
@@ -151,42 +137,20 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
     signal: input.signal,
     signalHash: input.signalHash,
     proofCommitment: createProofCommitment(id, input.nullifierDecimal, input.draftHash),
+    xUsername: input.xUsername,
     nullifierDecimal: input.nullifierDecimal,
     worldVerification: input.worldVerification,
     createdAt: now,
     updatedAt: now,
-    editTokenHash,
   };
 
   store.proofs.push(proof);
   await writeProofStore(store);
-  return { proof: toPublicProof(proof), editToken, createdNew: true };
+  return { proof: toPublicProof(proof), createdNew: true };
 }
 
 export async function getPublicProof(id: string): Promise<PublicProof | null> {
   const store = await readProofStore();
   const proof = store.proofs.find((item) => item.id === id);
   return proof ? toPublicProof(proof) : null;
-}
-
-export async function attachXPostUrl(id: string, editToken: string, xPostUrl: string): Promise<PublicProof> {
-  const normalizedUrl = normalizeXPostUrl(xPostUrl);
-  if (!normalizedUrl) {
-    throw new ApiError(400, "invalid_x_post_url", "Paste a valid X post URL.");
-  }
-
-  const store = await readProofStore();
-  const proof = store.proofs.find((item) => item.id === id);
-  if (!proof) {
-    throw new ApiError(404, "proof_not_found", "Proof not found.");
-  }
-
-  if (proof.editTokenHash !== hashEditToken(editToken)) {
-    throw new ApiError(403, "invalid_edit_token", "This proof cannot be edited from this device.");
-  }
-
-  proof.xPostUrl = normalizedUrl;
-  proof.updatedAt = new Date().toISOString();
-  await writeProofStore(store);
-  return toPublicProof(proof);
 }

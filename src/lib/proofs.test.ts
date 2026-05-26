@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { attachXPostUrl, createOrRefreshProof, getStorePath, readProofStore } from "@/lib/proofs";
+import { createOrRefreshProof, getStorePath, readProofStore } from "@/lib/proofs";
 
 let dataFile = "";
 
@@ -33,6 +33,7 @@ describe("proof store", () => {
       draftHash: "a".repeat(64),
       signal: `humanx:v1:${"a".repeat(64)}`,
       signalHash: `0x${"b".repeat(64)}`,
+      xUsername: "alice",
       nullifierDecimal: "123",
       worldVerification: {
         verifiedAt: "2026-05-26T15:00:00.000Z",
@@ -41,6 +42,7 @@ describe("proof store", () => {
 
     expect(result.createdNew).toBe(true);
     expect(result.proof.id).toMatch(/^hx_/);
+    expect(result.proof.xUsername).toBe("alice");
     expect("nullifierDecimal" in result.proof).toBe(false);
 
     const store = await readProofStore();
@@ -48,7 +50,7 @@ describe("proof store", () => {
     expect(store.proofs[0].nullifierDecimal).toBe("123");
   });
 
-  it("refreshes duplicate proof edit tokens and attaches X post URL", async () => {
+  it("refreshes duplicate proofs without creating another public proof", async () => {
     const first = await createOrRefreshProof({
       action: "humanx-tweet-proof",
       environment: "production",
@@ -56,6 +58,7 @@ describe("proof store", () => {
       draftHash: "a".repeat(64),
       signal: `humanx:v1:${"a".repeat(64)}`,
       signalHash: `0x${"b".repeat(64)}`,
+      xUsername: "alice",
       nullifierDecimal: "123",
       worldVerification: {
         verifiedAt: "2026-05-26T15:00:00.000Z",
@@ -69,6 +72,7 @@ describe("proof store", () => {
       draftHash: "a".repeat(64),
       signal: `humanx:v1:${"a".repeat(64)}`,
       signalHash: `0x${"b".repeat(64)}`,
+      xUsername: "alice",
       nullifierDecimal: "123",
       worldVerification: {
         verifiedAt: "2026-05-26T15:01:00.000Z",
@@ -77,12 +81,9 @@ describe("proof store", () => {
 
     expect(second.createdNew).toBe(false);
     expect(second.proof.id).toBe(first.proof.id);
+    expect(second.proof.xUsername).toBe("alice");
 
-    const patched = await attachXPostUrl(second.proof.id, second.editToken, "https://twitter.com/alice/status/123");
-    expect(patched.xPostUrl).toBe("https://x.com/alice/status/123");
-
-    await expect(attachXPostUrl(second.proof.id, first.editToken, "https://x.com/alice/status/124")).rejects.toThrow(
-      "cannot be edited",
-    );
+    const store = await readProofStore();
+    expect(store.proofs).toHaveLength(1);
   });
 });

@@ -7,7 +7,7 @@
 
 HumanX is a World Mini App that creates a public proof link for an X post after the creator completes World ID verification through IDKit.
 
-HumanX does not claim X account ownership in v1. It creates a World ID backed proof for the exact post text and opens X Web Intent so the user can post manually.
+HumanX requires X login before proof creation, creates a World ID backed proof for the exact post text, and opens X Web Intent so the user can post manually with the proof link attached.
 
 ## Features
 
@@ -16,8 +16,8 @@ HumanX does not claim X account ownership in v1. It creates a World ID backed pr
 - Server-side forwarding to the World verifier.
 - Signal binding between normalized post text and World ID proof.
 - Public proof pages with short commitments instead of public nullifiers.
+- X login with Auth.js before proof creation.
 - Same-window X Web Intent flow for World App webview compatibility.
-- Edit-token protected attachment of final X post URLs.
 
 ## Local Development
 
@@ -48,6 +48,10 @@ Copy `.env.example` to `.env.local` and set:
 - `WORLD_ID_ACTION=humanx-tweet-proof`
 - `WORLD_ID_ENVIRONMENT=staging` for simulator testing, `production` for submission
 - `NEXT_PUBLIC_APP_URL`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+- `X_CLIENT_ID`
+- `X_CLIENT_SECRET`
 - `SUPPORT_EMAIL`
 
 Never commit `.env`, `.env.local`, World signing keys, or production store data.

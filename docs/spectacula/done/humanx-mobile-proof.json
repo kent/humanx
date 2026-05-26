@@ -5,11 +5,11 @@
   "stage": "done",
   "spec_path": "../specs/humanx-mobile-proof.md",
   "created_at": "2026-05-26T15:08:15Z",
-  "updated_at": "2026-05-26T15:24:22Z",
-  "summary": "Implementation completed and verified for the HumanX World Mini App.",
-  "next_action": "Provide production World credentials, HTTPS hosting, support email, and final PNG assets before World App Store submission.",
+  "updated_at": "2026-05-26T16:36:26Z",
+  "summary": "Implementation completed and simplified for the HumanX World Mini App GOALS.md flow.",
+  "next_action": "Provide production World credentials, X OAuth credentials, HTTPS hosting, support email, and final PNG assets before World App Store submission.",
   "blockers": [
-    "World App Store submission still requires real Developer Portal app id, RP id, signing key, production HTTPS URL, support email, and final exported PNG store assets."
+    "World App Store submission still requires real Developer Portal app id, RP id, signing key, X OAuth credentials, production HTTPS URL, support email, and final exported PNG store assets."
   ],
   "reference_examples": [],
   "review_policy": {
@@ -23,10 +23,10 @@
     "tests": "passed",
     "spec_review": "passed",
     "final_vetting": "skipped",
-    "notes": "Passed pnpm lint, pnpm typecheck, pnpm test, pnpm build, and Spectacula lifecycle validation. Format gate skipped because no formatter script is configured. Final vetting skipped because review_policy.final_vetting is off for plain spectacula."
+    "notes": "Passed pnpm lint, pnpm typecheck, pnpm test, pnpm verify:goals, pnpm build, Spectacula lifecycle validation, and git diff --check after simplifying to the five GOALS.md stories. Format gate skipped because no formatter script is configured. Final vetting skipped because review_policy.final_vetting is off for plain spectacula."
   },
   "resume_context": {
-    "last_completed_step": "Moved manifest to done after required verification gates passed.",
+    "last_completed_step": "Simplified implementation to the five GOALS.md stories and added a machine-checkable goal contract test.",
     "pending_steps": [],
     "open_questions": [],
     "last_reviewed_sections": [],
@@ -42,7 +42,7 @@
       "public/store-card.svg",
       "docs/spectacula/specs/humanx-mobile-proof.md"
     ],
-    "notes": "Self-review confirmed the app includes MiniKitProvider, IDKit proof flow, backend RP signatures, World verifier forwarding, signal hash enforcement, file-backed proof persistence, public proof pages, same-window X Web Intent navigation, edit-token X URL attachment, store submission documentation, and app icon/content-card source assets."
+    "notes": "Self-review confirmed the app includes X login, MiniKitProvider, IDKit proof flow, backend RP signatures, World verifier forwarding, signal hash enforcement, file-backed proof persistence, public proof pages, same-window X Web Intent navigation, store submission documentation, and app icon/content-card source assets."
   },
   "history": [
     {
@@ -72,6 +72,20 @@
       "from_stage": "inprogress",
       "to_stage": "done",
       "note": "Implementation, verification loop, and spec self-review completed."
+    },
+    {
+      "at": "2026-05-26T15:49:55Z",
+      "event": "goals_loop_simplified",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Updated implementation and spec to require X login, remove the old X URL attachment path, and add a GOALS.md contract test."
+    },
+    {
+      "at": "2026-05-26T16:36:26Z",
+      "event": "final_verification",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed passive time-counting loop artifact and passed final gates before commit/push."
     }
   ],
   "approved_at": "2026-05-26T15:10:31Z",

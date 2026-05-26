@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, ExternalLink, Fingerprint, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Fingerprint, ShieldCheck } from "lucide-react";
 
 import { getPublicProof } from "@/lib/proofs";
 import { shortDigest } from "@/lib/text";
@@ -60,6 +60,10 @@ export default async function ProofPage({ params }: PageProps) {
             <p className="text-sm font-black">World ID verified</p>
           </div>
 
+          {proof.xUsername ? (
+            <p className="mt-3 text-sm font-bold text-[var(--muted)]">Posted from X login @{proof.xUsername}</p>
+          ) : null}
+
           <blockquote className="mt-5 whitespace-pre-wrap rounded-lg border border-[var(--line)] bg-white p-4 text-base leading-7">
             {proof.draftText}
           </blockquote>
@@ -100,14 +104,8 @@ export default async function ProofPage({ params }: PageProps) {
         </section>
 
         <div className="mt-4 grid gap-3">
-          {proof.xPostUrl ? (
-            <a className="primary-button" href={proof.xPostUrl}>
-              <ExternalLink aria-hidden="true" size={18} />
-              Open X post
-            </a>
-          ) : null}
           <Link className="secondary-button px-4" href="/">
-            Create proof
+            Post another
           </Link>
         </div>
       </div>
