@@ -108,6 +108,8 @@ export default function ComposeFlow() {
   const busy = phase === "signing_world" || phase === "creating_proof" || status === "loading";
   const canPost = Boolean(signedIn && hasXUsername && config?.hasWorldConfig && validation.ok && !busy);
   const canShowLastProof = Boolean(signedIn && isSavedProofVisibleForDraft(proofResult, username, text));
+  const postButtonLabel =
+    phase === "signing_world" ? "Sign with World ID" : phase === "creating_proof" ? "Creating proof" : "Post";
 
   const startXLogin = useCallback(() => {
     if (!config?.hasXAuthConfig) return;
@@ -352,7 +354,7 @@ export default function ComposeFlow() {
           <div className="shell">
             <button className="primary-button" type="button" disabled={!canPost} onClick={startPost}>
               {busy ? <Loader2 aria-hidden="true" className="animate-spin" size={18} /> : <Send aria-hidden="true" size={18} />}
-              Post
+              {postButtonLabel}
             </button>
           </div>
         </div>

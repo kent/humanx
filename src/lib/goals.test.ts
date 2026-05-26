@@ -28,6 +28,9 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain("Login with X");
     expect(composeFlow).toContain("hasXUsername");
     expect(composeFlow).toContain("normalizeXUsername");
+    expect(composeFlow).toContain("postButtonLabel");
+    expect(composeFlow).toContain("Sign with World ID");
+    expect(composeFlow).toContain("Creating proof");
     expect(composeFlow).toContain("parseSavedProofResult");
     expect(composeFlow).toContain("isSavedProofVisibleForDraft");
     expect(composeFlow).toContain("IDKitRequestWidget");
