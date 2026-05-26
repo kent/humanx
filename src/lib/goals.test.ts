@@ -49,4 +49,14 @@ describe("GOALS.md contract", () => {
     expect(proofRoute).toContain("normalizeXUsername");
     expect(proofRoute).toContain("xUsername");
   });
+
+  it("normalizes the X username at the auth boundary", () => {
+    const auth = readProjectFile("src/lib/auth.ts");
+
+    expect(auth).toContain("TwitterProvider");
+    expect(auth).toContain('version: "2.0"');
+    expect(auth).toContain("normalizeXUsername");
+    expect(auth).toContain("token.username");
+    expect(auth).toContain("session.user.username");
+  });
 });
