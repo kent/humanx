@@ -4,4 +4,5 @@ allowBuilds:
 blockExoticSubdeps: false
 overrides:
   postcss: 8.5.15
+  uuid: 11.1.1
   ws: 8.21.0
