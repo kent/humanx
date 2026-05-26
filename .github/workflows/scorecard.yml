@@ -8,17 +8,18 @@ on:
     branches:
       - main
 
-permissions:
-  actions: read
-  contents: read
-  id-token: write
-  security-events: write
+permissions: read-all
 
 jobs:
   scorecard:
     name: Scorecard
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      security-events: write
 
     steps:
       - name: Checkout
