@@ -48,6 +48,21 @@ async function readApiError(response: Response): Promise<string> {
   return payload?.error?.message ?? "Request failed.";
 }
 
+function isProofResult(value: unknown): value is ProofResult {
+  if (!value || typeof value !== "object") return false;
+
+  const result = value as Partial<ProofResult>;
+  return Boolean(
+    result.proof &&
+      typeof result.proof === "object" &&
+      typeof result.proof.id === "string" &&
+      typeof result.proof.draftText === "string" &&
+      typeof result.proof.proofCommitment === "string" &&
+      typeof result.proofUrl === "string" &&
+      typeof result.tweetIntentUrl === "string",
+  );
+}
+
 export default function ComposeFlow() {
   const { data: session, status } = useSession();
   const [config, setConfig] = useState<AppConfig | null>(null);
@@ -67,7 +82,11 @@ export default function ComposeFlow() {
     if (!saved) return null;
 
     try {
-      return JSON.parse(saved) as ProofResult;
+      const parsed = JSON.parse(saved) as unknown;
+      if (isProofResult(parsed)) return parsed;
+
+      window.localStorage.removeItem(STORAGE_KEY);
+      return null;
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
       return null;
