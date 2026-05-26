@@ -9,7 +9,7 @@ import {
   type RpContext,
 } from "@worldcoin/idkit";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { validatePostText } from "@/lib/text";
 
@@ -59,6 +59,7 @@ export default function ComposeFlow() {
   const [pendingDraft, setPendingDraft] = useState("");
   const [pendingSignal, setPendingSignal] = useState("");
   const [widgetOpen, setWidgetOpen] = useState(false);
+  const worldWidgetPendingRef = useRef(false);
   const [proofResult, setProofResult] = useState<ProofResult | null>(() => {
     if (typeof window === "undefined") return null;
 
@@ -148,8 +149,10 @@ export default function ComposeFlow() {
 
       const payload = (await response.json()) as { rp_context: RpContext };
       setRpContext(payload.rp_context);
+      worldWidgetPendingRef.current = true;
       setWidgetOpen(true);
     } catch (postError) {
+      worldWidgetPendingRef.current = false;
       setError(postError instanceof Error ? postError.message : "World verification could not start.");
       setPhase("error");
     }
@@ -158,6 +161,7 @@ export default function ComposeFlow() {
   const handleVerify = useCallback(
     async (result: IDKitResult) => {
       try {
+        worldWidgetPendingRef.current = false;
         setPhase("creating_proof");
         setError("");
 
@@ -181,6 +185,7 @@ export default function ComposeFlow() {
         setWidgetOpen(false);
         window.location.assign(payload.tweetIntentUrl);
       } catch (verifyError) {
+        worldWidgetPendingRef.current = false;
         setPhase("error");
         setWidgetOpen(false);
         setError(verifyError instanceof Error ? verifyError.message : "Proof could not be created.");
@@ -190,9 +195,21 @@ export default function ComposeFlow() {
   );
 
   const handleError = useCallback((code: IDKitErrorCodes) => {
+    worldWidgetPendingRef.current = false;
     setPhase("error");
     setWidgetOpen(false);
     setError(code === "user_rejected" ? "World ID signing was cancelled." : `World ID signing failed: ${code}.`);
+  }, []);
+
+  const handleWidgetOpenChange = useCallback((open: boolean) => {
+    setWidgetOpen(open);
+
+    if (!open && worldWidgetPendingRef.current) {
+      worldWidgetPendingRef.current = false;
+      setPhase("ready");
+      setNotice("");
+      setError("World ID signing was cancelled.");
+    }
   }, []);
 
   const openLastPost = useCallback(() => {
@@ -311,7 +328,7 @@ export default function ComposeFlow() {
         {config && rpContext && pendingSignal ? (
           <IDKitRequestWidget
             open={widgetOpen}
-            onOpenChange={setWidgetOpen}
+            onOpenChange={handleWidgetOpenChange}
             app_id={config.appId as `app_${string}`}
             action={config.action}
             rp_context={rpContext}
