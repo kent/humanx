@@ -31,6 +31,9 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain("postButtonLabel");
     expect(composeFlow).toContain("Sign with World ID");
     expect(composeFlow).toContain("Creating proof");
+    expect(composeFlow).toContain('role="alert"');
+    expect(composeFlow).toContain('role="status"');
+    expect(composeFlow).toContain("aria-busy={busy}");
     expect(composeFlow).toContain("parseSavedProofResult");
     expect(composeFlow).toContain("isSavedProofVisibleForDraft");
     expect(composeFlow).toContain("IDKitRequestWidget");

@@ -282,35 +282,35 @@ export default function ComposeFlow() {
         </section>
 
         {!config?.hasXAuthConfig && phase !== "loading" ? (
-          <div className="status-line status-warn mt-4 flex gap-2">
+          <div className="status-line status-warn mt-4 flex gap-2" role="status">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
             <span>X login needs `X_CLIENT_ID`, `X_CLIENT_SECRET`, and `NEXTAUTH_SECRET`.</span>
           </div>
         ) : null}
 
         {!config?.hasWorldConfig && phase !== "loading" ? (
-          <div className="status-line status-warn mt-4 flex gap-2">
+          <div className="status-line status-warn mt-4 flex gap-2" role="status">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
             <span>World ID signing needs Developer Portal credentials.</span>
           </div>
         ) : null}
 
         {signedIn && !hasXUsername ? (
-          <div className="status-line status-warn mt-4 flex gap-2">
+          <div className="status-line status-warn mt-4 flex gap-2" role="status">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
             <span>X login needs a username. Sign out and log in again.</span>
           </div>
         ) : null}
 
         {error ? (
-          <div className="status-line status-error mt-4 flex gap-2">
+          <div className="status-line status-error mt-4 flex gap-2" role="alert">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
             <span>{error}</span>
           </div>
         ) : null}
 
         {notice ? (
-          <div className="status-line status-ok mt-4 flex gap-2">
+          <div className="status-line status-ok mt-4 flex gap-2" role="status">
             <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
             <span>{notice}</span>
           </div>
@@ -352,7 +352,7 @@ export default function ComposeFlow() {
 
         <div className="fixed inset-x-0 bottom-0 border-t border-[var(--line)] bg-[rgba(247,245,239,0.94)] px-6 py-4 backdrop-blur">
           <div className="shell">
-            <button className="primary-button" type="button" disabled={!canPost} onClick={startPost}>
+            <button className="primary-button" type="button" disabled={!canPost} aria-busy={busy} onClick={startPost}>
               {busy ? <Loader2 aria-hidden="true" className="animate-spin" size={18} /> : <Send aria-hidden="true" size={18} />}
               {postButtonLabel}
             </button>
