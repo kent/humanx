@@ -50,6 +50,7 @@ describe("GOALS.md contract", () => {
     const proofRoute = readProjectFile("src/app/api/proofs/route.ts");
 
     expect(proofRoute).toContain("getServerSession(authOptions)");
+    expect(proofRoute).toContain("hasXLoginConfig");
     expect(proofRoute).toContain("x_login_required");
     expect(proofRoute).toContain("x_username_required");
     expect(proofRoute).toContain("normalizeXUsername");

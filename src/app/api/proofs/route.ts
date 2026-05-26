@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
-import { getRequestOrigin, getWorldServerConfig } from "@/lib/config";
+import { getRequestOrigin, getWorldServerConfig, hasXLoginConfig } from "@/lib/config";
 import { ApiError, errorResponse } from "@/lib/http";
 import { createOrRefreshProof } from "@/lib/proofs";
 import { buildXIntentUrl, normalizeXUsername } from "@/lib/x";
@@ -19,6 +19,10 @@ const requestSchema = z.object({
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    if (!hasXLoginConfig()) {
+      throw new ApiError(401, "x_login_required", "Login with X before posting.");
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       throw new ApiError(401, "x_login_required", "Login with X before posting.");
