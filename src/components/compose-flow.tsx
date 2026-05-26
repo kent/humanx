@@ -11,15 +11,8 @@ import {
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { parseSavedProofResult, type SavedProofResult } from "@/lib/saved-proof";
 import { validatePostText } from "@/lib/text";
-
-type PublicProof = {
-  id: string;
-  draftText: string;
-  createdAt: string;
-  proofCommitment: string;
-  xUsername?: string;
-};
 
 type AppConfig = {
   appId: string;
@@ -28,13 +21,6 @@ type AppConfig = {
   hasWorldConfig: boolean;
   hasXAuthConfig: boolean;
   maxPostTextLength: number;
-};
-
-type ProofResult = {
-  proof: PublicProof;
-  proofUrl: string;
-  tweetIntentUrl: string;
-  createdNew: boolean;
 };
 
 type Phase = "loading" | "ready" | "signing_world" | "creating_proof" | "proof_ready" | "error";
@@ -46,53 +32,6 @@ async function readApiError(response: Response): Promise<string> {
     | { error?: { message?: string } }
     | null;
   return payload?.error?.message ?? "Request failed.";
-}
-
-function isProofResult(value: unknown): value is ProofResult {
-  if (!value || typeof value !== "object") return false;
-
-  const result = value as Partial<ProofResult>;
-  const proofUrl = normalizeSameOriginProofUrl(result.proofUrl);
-  return Boolean(
-    result.proof &&
-      typeof result.proof === "object" &&
-      typeof result.proof.id === "string" &&
-      typeof result.proof.draftText === "string" &&
-      typeof result.proof.proofCommitment === "string" &&
-      proofUrl &&
-      isMatchingXIntentUrl(result.tweetIntentUrl, proofUrl, result.proof.draftText),
-  );
-}
-
-function normalizeSameOriginProofUrl(value: unknown): string | null {
-  if (typeof value !== "string" || typeof window === "undefined") return null;
-
-  try {
-    const url = new URL(value, window.location.origin);
-    if (url.origin !== window.location.origin || !url.pathname.startsWith("/proof/")) {
-      return null;
-    }
-
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
-function isMatchingXIntentUrl(value: unknown, proofUrl: string, postText: string): boolean {
-  if (typeof value !== "string") return false;
-
-  try {
-    const url = new URL(value);
-    return (
-      url.origin === "https://x.com" &&
-      url.pathname === "/intent/tweet" &&
-      url.searchParams.get("url") === proofUrl &&
-      url.searchParams.get("text") === postText
-    );
-  } catch {
-    return false;
-  }
 }
 
 export default function ComposeFlow() {
@@ -107,7 +46,7 @@ export default function ComposeFlow() {
   const [pendingSignal, setPendingSignal] = useState("");
   const [widgetOpen, setWidgetOpen] = useState(false);
   const worldWidgetPendingRef = useRef(false);
-  const [proofResult, setProofResult] = useState<ProofResult | null>(() => {
+  const [proofResult, setProofResult] = useState<SavedProofResult | null>(() => {
     if (typeof window === "undefined") return null;
 
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -115,7 +54,8 @@ export default function ComposeFlow() {
 
     try {
       const parsed = JSON.parse(saved) as unknown;
-      if (isProofResult(parsed)) return parsed;
+      const savedProof = parseSavedProofResult(parsed, window.location.origin);
+      if (savedProof) return savedProof;
 
       window.localStorage.removeItem(STORAGE_KEY);
       return null;
@@ -236,7 +176,7 @@ export default function ComposeFlow() {
           throw new Error(await readApiError(response));
         }
 
-        const payload = (await response.json()) as ProofResult;
+        const payload = (await response.json()) as SavedProofResult;
         setProofResult(payload);
         setNotice("Opening X with your proof.");
         setPhase("proof_ready");

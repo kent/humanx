@@ -27,9 +27,7 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain('signIn("twitter")');
     expect(composeFlow).toContain("Login with X");
     expect(composeFlow).toContain("hasXUsername");
-    expect(composeFlow).toContain("isProofResult");
-    expect(composeFlow).toContain("isMatchingXIntentUrl");
-    expect(composeFlow).toContain("normalizeSameOriginProofUrl");
+    expect(composeFlow).toContain("parseSavedProofResult");
     expect(composeFlow).toContain("IDKitRequestWidget");
     expect(composeFlow).toContain("handleWidgetOpenChange");
     expect(composeFlow).toContain("proofResult.proof.xUsername === username");
