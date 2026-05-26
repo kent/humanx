@@ -31,6 +31,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm verify:goals && pnpm build",
     "verify:goals": "vitest run src/lib/goals.test.ts"
   },
   "dependencies": {

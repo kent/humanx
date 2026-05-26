@@ -59,10 +59,8 @@ Never commit `.env`, `.env.local`, World signing keys, or production store data.
 ## Verification
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
+pnpm verify
+pnpm audit --audit-level moderate
 python3 /Users/kent/.codex/skills/spectacula/scripts/spectacula.py validate
 ```
 
