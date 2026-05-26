@@ -52,15 +52,47 @@ function isProofResult(value: unknown): value is ProofResult {
   if (!value || typeof value !== "object") return false;
 
   const result = value as Partial<ProofResult>;
+  const proofUrl = normalizeSameOriginProofUrl(result.proofUrl);
   return Boolean(
     result.proof &&
       typeof result.proof === "object" &&
       typeof result.proof.id === "string" &&
       typeof result.proof.draftText === "string" &&
       typeof result.proof.proofCommitment === "string" &&
-      typeof result.proofUrl === "string" &&
-      typeof result.tweetIntentUrl === "string",
+      proofUrl &&
+      isMatchingXIntentUrl(result.tweetIntentUrl, proofUrl, result.proof.draftText),
   );
+}
+
+function normalizeSameOriginProofUrl(value: unknown): string | null {
+  if (typeof value !== "string" || typeof window === "undefined") return null;
+
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin || !url.pathname.startsWith("/proof/")) {
+      return null;
+    }
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function isMatchingXIntentUrl(value: unknown, proofUrl: string, postText: string): boolean {
+  if (typeof value !== "string") return false;
+
+  try {
+    const url = new URL(value);
+    return (
+      url.origin === "https://x.com" &&
+      url.pathname === "/intent/tweet" &&
+      url.searchParams.get("url") === proofUrl &&
+      url.searchParams.get("text") === postText
+    );
+  } catch {
+    return false;
+  }
 }
 
 export default function ComposeFlow() {
