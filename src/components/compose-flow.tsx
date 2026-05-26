@@ -114,6 +114,7 @@ export default function ComposeFlow() {
   const busy = phase === "signing_world" || phase === "creating_proof" || status === "loading";
   const canPost = Boolean(signedIn && config?.hasWorldConfig && validation.ok && !busy);
   const username = session?.user?.username;
+  const canShowLastProof = Boolean(proofResult && signedIn && username && proofResult.proof.xUsername === username);
 
   const startXLogin = useCallback(() => {
     if (!config?.hasXAuthConfig) return;
@@ -213,9 +214,9 @@ export default function ComposeFlow() {
   }, []);
 
   const openLastPost = useCallback(() => {
-    if (!proofResult) return;
+    if (!proofResult || !canShowLastProof) return;
     window.location.assign(proofResult.tweetIntentUrl);
-  }, [proofResult]);
+  }, [canShowLastProof, proofResult]);
 
   return (
     <main className="safe-page">
@@ -308,7 +309,7 @@ export default function ComposeFlow() {
           </div>
         ) : null}
 
-        {proofResult && signedIn ? (
+        {proofResult && canShowLastProof ? (
           <section className="surface mt-5 p-4">
             <p className="text-sm font-black text-[var(--accent)]">Last proof is ready</p>
             <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-[var(--muted)]">

@@ -28,7 +28,8 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain("Login with X");
     expect(composeFlow).toContain("IDKitRequestWidget");
     expect(composeFlow).toContain("handleWidgetOpenChange");
-    expect(composeFlow).toContain("proofResult && signedIn");
+    expect(composeFlow).toContain("proofResult.proof.xUsername === username");
+    expect(composeFlow).toContain("proofResult && canShowLastProof");
     expect(composeFlow).toContain("/api/world/rp-signature");
     expect(composeFlow).toContain("/api/proofs");
     expect(composeFlow).toContain("window.location.assign(payload.tweetIntentUrl)");
