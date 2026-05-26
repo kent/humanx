@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildXIntentUrl } from "@/lib/x";
-import { parseSavedProofResult } from "@/lib/saved-proof";
+import { isSavedProofVisibleForDraft, parseSavedProofResult } from "@/lib/saved-proof";
 
 const appOrigin = "https://humanx.example";
 const proofUrl = `${appOrigin}/proof/hx_123`;
@@ -64,5 +64,26 @@ describe("saved proof parsing", () => {
         appOrigin,
       ),
     ).toBeNull();
+  });
+});
+
+describe("saved proof visibility", () => {
+  it("shows a saved proof for the same user when the compose box is empty", () => {
+    const proofResult = parseSavedProofResult(makeSavedProof(), appOrigin);
+
+    expect(isSavedProofVisibleForDraft(proofResult, "@Alice", "")).toBe(true);
+  });
+
+  it("shows a saved proof when the current draft still matches after normalization", () => {
+    const proofResult = parseSavedProofResult(makeSavedProof(), appOrigin);
+
+    expect(isSavedProofVisibleForDraft(proofResult, "alice", " Posting   with HumanX ")).toBe(true);
+  });
+
+  it("hides a saved proof for a different draft or X account", () => {
+    const proofResult = parseSavedProofResult(makeSavedProof(), appOrigin);
+
+    expect(isSavedProofVisibleForDraft(proofResult, "alice", "A different post")).toBe(false);
+    expect(isSavedProofVisibleForDraft(proofResult, "bob", "")).toBe(false);
   });
 });

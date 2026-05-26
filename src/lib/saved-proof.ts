@@ -1,3 +1,4 @@
+import { normalizePostText } from "@/lib/text";
 import { normalizeXUsername } from "@/lib/x";
 
 export type SavedPublicProof = {
@@ -34,6 +35,20 @@ export function parseSavedProofResult(value: unknown, appOrigin: string): SavedP
     tweetIntentUrl,
     createdNew: result.createdNew,
   };
+}
+
+export function isSavedProofVisibleForDraft(
+  proofResult: SavedProofResult | null,
+  xUsername: string | null | undefined,
+  draftText: string,
+): proofResult is SavedProofResult {
+  if (!proofResult) return false;
+
+  const username = normalizeXUsername(xUsername);
+  if (!username || proofResult.proof.xUsername !== username) return false;
+
+  const normalizedDraft = normalizePostText(draftText);
+  return !normalizedDraft || normalizedDraft === proofResult.proof.draftText;
 }
 
 function normalizeProof(value: unknown): SavedPublicProof | null {

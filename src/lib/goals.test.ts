@@ -29,9 +29,9 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain("hasXUsername");
     expect(composeFlow).toContain("normalizeXUsername");
     expect(composeFlow).toContain("parseSavedProofResult");
+    expect(composeFlow).toContain("isSavedProofVisibleForDraft");
     expect(composeFlow).toContain("IDKitRequestWidget");
     expect(composeFlow).toContain("handleWidgetOpenChange");
-    expect(composeFlow).toContain("proofResult.proof.xUsername === username");
     expect(composeFlow).toContain("proofResult && canShowLastProof");
     expect(composeFlow).toContain("/api/world/rp-signature");
     expect(composeFlow).toContain("/api/proofs");

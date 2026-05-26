@@ -11,7 +11,7 @@ import {
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { parseSavedProofResult, type SavedProofResult } from "@/lib/saved-proof";
+import { isSavedProofVisibleForDraft, parseSavedProofResult, type SavedProofResult } from "@/lib/saved-proof";
 import { validatePostText } from "@/lib/text";
 import { normalizeXUsername } from "@/lib/x";
 
@@ -107,7 +107,7 @@ export default function ComposeFlow() {
   const hasXUsername = Boolean(username);
   const busy = phase === "signing_world" || phase === "creating_proof" || status === "loading";
   const canPost = Boolean(signedIn && hasXUsername && config?.hasWorldConfig && validation.ok && !busy);
-  const canShowLastProof = Boolean(proofResult && signedIn && username && proofResult.proof.xUsername === username);
+  const canShowLastProof = Boolean(signedIn && isSavedProofVisibleForDraft(proofResult, username, text));
 
   const startXLogin = useCallback(() => {
     if (!config?.hasXAuthConfig) return;
