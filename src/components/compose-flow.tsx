@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { parseSavedProofResult, type SavedProofResult } from "@/lib/saved-proof";
 import { validatePostText } from "@/lib/text";
+import { normalizeXUsername } from "@/lib/x";
 
 type AppConfig = {
   appId: string;
@@ -102,7 +103,7 @@ export default function ComposeFlow() {
   const normalizedLength = validation.ok ? validation.normalized.length : text.trim().length;
   const charactersLeft = (config?.maxPostTextLength ?? 220) - normalizedLength;
   const signedIn = status === "authenticated";
-  const username = session?.user?.username;
+  const username = normalizeXUsername(session?.user?.username);
   const hasXUsername = Boolean(username);
   const busy = phase === "signing_world" || phase === "creating_proof" || status === "loading";
   const canPost = Boolean(signedIn && hasXUsername && config?.hasWorldConfig && validation.ok && !busy);

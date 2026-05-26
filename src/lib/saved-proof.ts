@@ -1,3 +1,5 @@
+import { normalizeXUsername } from "@/lib/x";
+
 export type SavedPublicProof = {
   id: string;
   draftText: string;
@@ -52,7 +54,7 @@ function normalizeProof(value: unknown): SavedPublicProof | null {
     draftText: proof.draftText,
     createdAt: proof.createdAt,
     proofCommitment: proof.proofCommitment,
-    xUsername: typeof proof.xUsername === "string" ? proof.xUsername : undefined,
+    xUsername: normalizeXUsername(proof.xUsername) ?? undefined,
   };
 }
 

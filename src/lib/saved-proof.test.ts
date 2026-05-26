@@ -29,6 +29,23 @@ describe("saved proof parsing", () => {
     expect(parseSavedProofResult(makeSavedProof(), appOrigin)).toEqual(makeSavedProof());
   });
 
+  it("normalizes saved X usernames", () => {
+    expect(
+      parseSavedProofResult(
+        makeSavedProof({
+          proof: {
+            id: "hx_123",
+            draftText: "Posting with HumanX",
+            createdAt: "2026-05-26T16:00:00.000Z",
+            proofCommitment: "a".repeat(64),
+            xUsername: "@Alice",
+          },
+        }),
+        appOrigin,
+      )?.proof.xUsername,
+    ).toBe("alice");
+  });
+
   it("rejects malformed proof payloads", () => {
     expect(parseSavedProofResult({ proofUrl, tweetIntentUrl: buildXIntentUrl("hello", proofUrl) }, appOrigin)).toBeNull();
     expect(parseSavedProofResult(makeSavedProof({ createdNew: "true" }), appOrigin)).toBeNull();

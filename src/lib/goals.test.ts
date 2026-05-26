@@ -27,6 +27,7 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain('signIn("twitter")');
     expect(composeFlow).toContain("Login with X");
     expect(composeFlow).toContain("hasXUsername");
+    expect(composeFlow).toContain("normalizeXUsername");
     expect(composeFlow).toContain("parseSavedProofResult");
     expect(composeFlow).toContain("IDKitRequestWidget");
     expect(composeFlow).toContain("handleWidgetOpenChange");
@@ -45,6 +46,7 @@ describe("GOALS.md contract", () => {
     expect(proofRoute).toContain("getServerSession(authOptions)");
     expect(proofRoute).toContain("x_login_required");
     expect(proofRoute).toContain("x_username_required");
+    expect(proofRoute).toContain("normalizeXUsername");
     expect(proofRoute).toContain("xUsername");
   });
 });

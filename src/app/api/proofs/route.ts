@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { getRequestOrigin, getWorldServerConfig } from "@/lib/config";
 import { ApiError, errorResponse } from "@/lib/http";
 import { createOrRefreshProof } from "@/lib/proofs";
-import { buildXIntentUrl } from "@/lib/x";
+import { buildXIntentUrl, normalizeXUsername } from "@/lib/x";
 import { validatePostText } from "@/lib/text";
 import { assertIdKitSignal, hashSignalToField, type IdKitPayload, verifyWorldProof } from "@/lib/world";
 
@@ -24,7 +24,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw new ApiError(401, "x_login_required", "Login with X before posting.");
     }
 
-    const xUsername = session.user.username?.trim();
+    const xUsername = normalizeXUsername(session.user.username);
     if (!xUsername) {
       throw new ApiError(401, "x_username_required", "Login with X again before posting.");
     }
