@@ -11,7 +11,7 @@ export default function NotFound() {
           </div>
           <h1 className="text-2xl font-black">Proof not found</h1>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            This HumanX proof link is missing or no longer available.
+            This VeriPost proof link is missing or no longer available.
           </p>
           <Link className="primary-button mt-6" href="/">
             Create proof

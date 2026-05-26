@@ -5,7 +5,7 @@ import { assertIdKitSignal, extractNullifier, hashSignalToField, nullifierToDeci
 
 describe("World ID signal binding", () => {
   it("matches the IDKit hashSignal helper", () => {
-    const signal = "humanx:v1:9adcc7206d8d990e9c1fe713ab7aeea18c5f1cb87ff88f1d06b5b2d351b4f924";
+    const signal = "veripost:v1:9adcc7206d8d990e9c1fe713ab7aeea18c5f1cb87ff88f1d06b5b2d351b4f924";
 
     expect(hashSignalToField(signal)).toBe(hashSignal(signal));
   });
@@ -16,7 +16,7 @@ describe("World ID signal binding", () => {
         {
           protocol_version: "4.0",
           nonce: "0xabc",
-          action: "humanx-tweet-proof",
+          action: "veripost-tweet-proof",
           environment: "production",
           responses: [
             {
@@ -29,7 +29,7 @@ describe("World ID signal binding", () => {
             },
           ],
         },
-        "humanx-tweet-proof",
+        "veripost-tweet-proof",
         hashSignalToField("expected"),
       ),
     ).toThrow("proof does not match");
@@ -42,7 +42,7 @@ describe("World ID signal binding", () => {
       extractNullifier({
         protocol_version: "4.0",
         nonce: "0xabc",
-        action: "humanx-tweet-proof",
+        action: "veripost-tweet-proof",
         environment: "production",
         responses: [
           {

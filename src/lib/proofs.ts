@@ -49,7 +49,7 @@ export type CreateProofInput = {
 const STORE_VERSION = 1;
 
 export function getStorePath(): string {
-  const configuredPath = process.env.HUMANX_DATA_FILE?.trim() || "proofs.json";
+  const configuredPath = process.env.VERIPOST_DATA_FILE?.trim() || "proofs.json";
   const fileName = configuredPath
     .replace(/\\/g, "/")
     .replace(/^(?:\.\/)?(?:\.data|data)\//, "")
@@ -63,7 +63,7 @@ export function getStorePath(): string {
 }
 
 export function createProofId(): string {
-  return `hx_${randomBytes(10).toString("base64url")}`;
+  return `vp_${randomBytes(10).toString("base64url")}`;
 }
 
 export function createProofCommitment(id: string, nullifierDecimal: string, draftHash: string): string {
@@ -76,9 +76,17 @@ export function toPublicProof(proof: StoredProofClaim | ProofClaim): PublicProof
   return publicProof as PublicProof;
 }
 
-export async function readProofStore(): Promise<ProofStore> {
-  const filePath = getStorePath();
+function usePostgres(): boolean {
+  return Boolean(process.env.POSTGRES_URL || process.env.DATABASE_URL);
+}
 
+export async function readProofStore(): Promise<ProofStore> {
+  if (usePostgres()) {
+    const { pgReadAll } = await import("@/lib/proofs-pg");
+    return { proofs: await pgReadAll() };
+  }
+
+  const filePath = getStorePath();
   try {
     const raw = await fs.readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as ProofStore;
@@ -93,6 +101,10 @@ export async function readProofStore(): Promise<ProofStore> {
 }
 
 export async function writeProofStore(store: ProofStore): Promise<void> {
+  if (usePostgres()) {
+    throw new ApiError(500, "storage_error", "writeProofStore is not supported with Postgres; use createOrRefreshProof.");
+  }
+
   const filePath = getStorePath();
   const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
 
@@ -112,8 +124,17 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
   proof: PublicProof;
   createdNew: boolean;
 }> {
-  const store = await readProofStore();
   const now = new Date().toISOString();
+
+  if (usePostgres()) {
+    const { pgUpsertProof } = await import("@/lib/proofs-pg");
+    const id = createProofId();
+    const commitment = createProofCommitment(id, input.nullifierDecimal, input.draftHash);
+    const result = await pgUpsertProof({ ...input, id, proofCommitment: commitment, now });
+    return { proof: toPublicProof(result.proof), createdNew: result.createdNew };
+  }
+
+  const store = await readProofStore();
   const duplicate = store.proofs.find(
     (proof) => proof.nullifierDecimal === input.nullifierDecimal && proof.draftHash === input.draftHash,
   );
@@ -150,6 +171,12 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
 }
 
 export async function getPublicProof(id: string): Promise<PublicProof | null> {
+  if (usePostgres()) {
+    const { pgGetById } = await import("@/lib/proofs-pg");
+    const stored = await pgGetById(id);
+    return stored ? toPublicProof(stored) : null;
+  }
+
   const store = await readProofStore();
   const proof = store.proofs.find((item) => item.id === id);
   return proof ? toPublicProof(proof) : null;

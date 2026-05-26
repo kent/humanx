@@ -1,16 +1,16 @@
-# HumanX World App Store Submission Notes
+# VeriPost World App Store Submission Notes
 
-HumanX is built as a World Mini App: a mobile-first web app running inside World App through MiniKit, with IDKit proof verification on the backend.
+VeriPost is built as a World Mini App: a mobile-first web app running inside World App through MiniKit, with IDKit proof verification on the backend.
 
 ## Listing Draft
 
 | Field | Draft |
 |---|---|
-| App name | HumanX |
+| App name | VeriPost |
 | Short description | Prove a post came from a verified human without revealing identity. |
 | Category | Social |
-| Support email | Set `SUPPORT_EMAIL` before submission. |
-| Website URL | Set production `NEXT_PUBLIC_APP_URL`. |
+| Support email | support@veripost.io |
+| Website URL | https://veripost.io |
 
 Do not use "official" in the listing or UI. Do not use the World logo or a modified World logo.
 
@@ -19,29 +19,30 @@ Do not use "official" in the listing or UI. Do not use the World logo or a modif
 - `NEXT_PUBLIC_WORLD_APP_ID`
 - `WORLD_RP_ID`
 - `WORLD_RP_SIGNING_KEY`
-- `WORLD_ID_ACTION=humanx-tweet-proof`
+- `WORLD_ID_ACTION=veripost-tweet-proof`
 - `WORLD_ID_ENVIRONMENT=production`
-- `NEXT_PUBLIC_APP_URL=https://<production-host>`
-- `NEXTAUTH_URL=https://<production-host>`
+- `NEXT_PUBLIC_APP_URL=https://veripost.io`
+- `NEXTAUTH_URL=https://veripost.io`
 - `NEXTAUTH_SECRET=<strong-random-secret>`
 - `X_CLIENT_ID=<x-oauth-client-id>`
 - `X_CLIENT_SECRET=<x-oauth-client-secret>`
-- `SUPPORT_EMAIL=<public-support-email>`
+- `POSTGRES_URL=<vercel-postgres-or-neon-connection-string>`
+- `SUPPORT_EMAIL=support@veripost.io`
 
-Production storage should replace the local file store with a durable database before a public launch.
+Production storage uses Postgres. Run `pnpm db:migrate` once after provisioning to apply `migrations/0001_init.sql`.
 
 ## Store Assets
 
-| Asset | Requirement | Current Source |
-|---|---|---|
-| App icon | Square image with non-white background | `public/app-icon.svg` |
-| Content card | 345x240 px, exported as PNG at 3x, bottom 94 px free of important detail | `public/store-card.svg` source at 1035x720 |
+| Asset | Requirement | Source | Exported |
+|---|---|---|---|
+| App icon | Square image with non-white background | `public/app-icon.svg` | `public/app-icon.png` (1024×1024) |
+| Content card | 345x240 px, exported as PNG at 3x, bottom 94 px free of important detail | `public/store-card.svg` (1035×720) | `public/store-card.png` (1035×720) |
 
-Export final PNGs without metadata before Developer Portal submission.
+PNGs are pre-stripped of metadata before submission.
 
 ## Review Test Flow
 
-1. Open the production HTTPS URL from the Developer Portal Mini App tester.
+1. Open https://veripost.io from the Developer Portal Mini App tester.
 2. Confirm the app loads without footer, sidebar, hamburger menu, or infinite loading.
 3. Tap "Login with X" and complete X OAuth.
 4. Enter a short X post.
@@ -51,8 +52,6 @@ Export final PNGs without metadata before Developer Portal submission.
 
 ## Current Submission Blockers
 
-- Real Developer Portal app id, RP id, and signing key are required for live verification.
-- X OAuth 2.0 client id/secret and Auth.js secret are required for X login.
-- Production HTTPS hosting URL is required.
-- Public support email is required.
-- Final PNG store assets should be exported from the provided SVG sources or replaced by approved brand assets.
+- Real Developer Portal app id, RP id, and signing key are required for live verification (register action `veripost-tweet-proof`).
+- X OAuth 2.0 client id/secret are required for X login (callback `https://veripost.io/api/auth/callback/twitter`, scopes `tweet.read users.read offline.access`).
+- Postgres connection string set in production env and migrations applied.

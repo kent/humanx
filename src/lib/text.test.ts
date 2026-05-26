@@ -16,7 +16,7 @@ describe("post text normalization", () => {
     expect(validation.ok).toBe(true);
     if (validation.ok) {
       expect(buildWorldSignal(validation.draftHash)).toBe(validation.signal);
-      expect(validation.signal).toMatch(/^humanx:v1:[0-9a-f]{64}$/);
+      expect(validation.signal).toMatch(/^veripost:v1:[0-9a-f]{64}$/);
     }
   });
 

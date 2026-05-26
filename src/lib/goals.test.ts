@@ -9,7 +9,7 @@ function readProjectFile(filePath: string): string {
 
 describe("GOALS.md contract", () => {
   it("keeps the product scope to the five simple user stories", () => {
-    expect(readProjectFile("GOALS.md")).toBe(`# humanx
+    expect(readProjectFile("GOALS.md")).toBe(`# veripost
 
 ## User Stories
 

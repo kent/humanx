@@ -1,5 +1,5 @@
 {
-  "name": "humanx",
+  "name": "veripost",
   "version": "0.1.0",
   "private": true,
   "description": "World Mini App for verified-human proof links on X posts.",
@@ -17,6 +17,7 @@
     "world-mini-app",
     "idkit",
     "proof-of-human",
+    "veripost",
     "nextjs"
   ],
   "engines": {
@@ -32,7 +33,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm verify:goals && pnpm build",
-    "verify:goals": "vitest run src/lib/goals.test.ts"
+    "verify:goals": "vitest run src/lib/goals.test.ts",
+    "db:migrate": "node ./scripts/migrate.mjs"
   },
   "dependencies": {
     "@noble/hashes": "2.2.0",
@@ -41,6 +43,7 @@
     "lucide-react": "1.16.0",
     "next": "16.2.6",
     "next-auth": "4.24.14",
+    "postgres": "3.4.5",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "siwe": "3.0.0",

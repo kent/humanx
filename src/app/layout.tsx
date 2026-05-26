@@ -4,11 +4,11 @@ import Providers from "@/app/providers";
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
-  title: "HumanX",
+  title: "VeriPost",
   description: "Verified human proof for X posts.",
   appleWebApp: {
     capable: true,
-    title: "HumanX",
+    title: "VeriPost",
   },
   icons: {
     icon: "/app-icon.svg",

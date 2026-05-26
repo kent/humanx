@@ -10,28 +10,28 @@ let dataFile = "";
 
 beforeEach(() => {
   dataFile = `test-${randomUUID()}.json`;
-  process.env.HUMANX_DATA_FILE = dataFile;
+  process.env.VERIPOST_DATA_FILE = dataFile;
 });
 
 afterEach(async () => {
-  delete process.env.HUMANX_DATA_FILE;
+  delete process.env.VERIPOST_DATA_FILE;
   await rm(path.join(process.cwd(), ".data", dataFile), { force: true });
 });
 
 describe("proof store", () => {
   it("keeps configured store files scoped under .data", () => {
-    process.env.HUMANX_DATA_FILE = ".data/custom-proof-store.json";
+    process.env.VERIPOST_DATA_FILE = ".data/custom-proof-store.json";
 
     expect(getStorePath()).toBe(path.join(process.cwd(), ".data", "custom-proof-store.json"));
   });
 
   it("creates proofs without exposing nullifiers publicly", async () => {
     const result = await createOrRefreshProof({
-      action: "humanx-tweet-proof",
+      action: "veripost-tweet-proof",
       environment: "production",
       draftText: "Human proof for this post",
       draftHash: "a".repeat(64),
-      signal: `humanx:v1:${"a".repeat(64)}`,
+      signal: `veripost:v1:${"a".repeat(64)}`,
       signalHash: `0x${"b".repeat(64)}`,
       xUsername: "alice",
       nullifierDecimal: "123",
@@ -41,7 +41,7 @@ describe("proof store", () => {
     });
 
     expect(result.createdNew).toBe(true);
-    expect(result.proof.id).toMatch(/^hx_/);
+    expect(result.proof.id).toMatch(/^vp_/);
     expect(result.proof.xUsername).toBe("alice");
     expect("nullifierDecimal" in result.proof).toBe(false);
 
@@ -52,11 +52,11 @@ describe("proof store", () => {
 
   it("refreshes duplicate proofs without creating another public proof", async () => {
     const first = await createOrRefreshProof({
-      action: "humanx-tweet-proof",
+      action: "veripost-tweet-proof",
       environment: "production",
       draftText: "Human proof for this post",
       draftHash: "a".repeat(64),
-      signal: `humanx:v1:${"a".repeat(64)}`,
+      signal: `veripost:v1:${"a".repeat(64)}`,
       signalHash: `0x${"b".repeat(64)}`,
       xUsername: "alice",
       nullifierDecimal: "123",
@@ -66,11 +66,11 @@ describe("proof store", () => {
     });
 
     const second = await createOrRefreshProof({
-      action: "humanx-tweet-proof",
+      action: "veripost-tweet-proof",
       environment: "production",
       draftText: "Human proof for this post",
       draftHash: "a".repeat(64),
-      signal: `humanx:v1:${"a".repeat(64)}`,
+      signal: `veripost:v1:${"a".repeat(64)}`,
       signalHash: `0x${"b".repeat(64)}`,
       xUsername: "alice",
       nullifierDecimal: "123",

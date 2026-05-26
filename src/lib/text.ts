@@ -2,7 +2,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 
 export const MAX_POST_TEXT_LENGTH = 220;
-export const WORLD_ID_ACTION_DEFAULT = "humanx-tweet-proof";
+export const WORLD_ID_ACTION_DEFAULT = "veripost-tweet-proof";
 
 const encoder = new TextEncoder();
 
@@ -25,7 +25,7 @@ export function hashDraftText(normalizedText: string): string {
 }
 
 export function buildWorldSignal(draftHash: string): string {
-  return `humanx:v1:${draftHash}`;
+  return `veripost:v1:${draftHash}`;
 }
 
 export function validatePostText(input: string): TextValidation {

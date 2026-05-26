@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 import { buildXIntentUrl } from "@/lib/x";
 import { isSavedProofVisibleForDraft, parseSavedProofResult } from "@/lib/saved-proof";
 
-const appOrigin = "https://humanx.example";
-const proofUrl = `${appOrigin}/proof/hx_123`;
+const appOrigin = "https://veripost.io";
+const proofUrl = `${appOrigin}/proof/vp_123`;
 
 function makeSavedProof(overrides: Record<string, unknown> = {}) {
   const proof = {
-    id: "hx_123",
-    draftText: "Posting with HumanX",
+    id: "vp_123",
+    draftText: "Posting with VeriPost",
     createdAt: "2026-05-26T16:00:00.000Z",
     proofCommitment: "a".repeat(64),
     xUsername: "alice",
@@ -34,8 +34,8 @@ describe("saved proof parsing", () => {
       parseSavedProofResult(
         makeSavedProof({
           proof: {
-            id: "hx_123",
-            draftText: "Posting with HumanX",
+            id: "vp_123",
+            draftText: "Posting with VeriPost",
             createdAt: "2026-05-26T16:00:00.000Z",
             proofCommitment: "a".repeat(64),
             xUsername: "@Alice",
@@ -52,7 +52,7 @@ describe("saved proof parsing", () => {
   });
 
   it("rejects proof URLs outside the app origin", () => {
-    expect(parseSavedProofResult(makeSavedProof({ proofUrl: "https://evil.example/proof/hx_123" }), appOrigin)).toBeNull();
+    expect(parseSavedProofResult(makeSavedProof({ proofUrl: "https://evil.example/proof/vp_123" }), appOrigin)).toBeNull();
   });
 
   it("rejects tweet intents that do not match the saved proof", () => {
@@ -77,7 +77,7 @@ describe("saved proof visibility", () => {
   it("shows a saved proof when the current draft still matches after normalization", () => {
     const proofResult = parseSavedProofResult(makeSavedProof(), appOrigin);
 
-    expect(isSavedProofVisibleForDraft(proofResult, "alice", " Posting   with HumanX ")).toBe(true);
+    expect(isSavedProofVisibleForDraft(proofResult, "alice", " Posting   with VeriPost ")).toBe(true);
   });
 
   it("hides a saved proof for a different draft or X account", () => {

@@ -18,12 +18,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!proof) {
     return {
-      title: "HumanX proof not found",
+      title: "VeriPost proof not found",
     };
   }
 
   return {
-    title: `HumanX proof ${proof.id}`,
+    title: `VeriPost proof ${proof.id}`,
     description: "Verified human proof for an X post.",
     openGraph: {
       title: "Verified human proof",
@@ -46,7 +46,7 @@ export default async function ProofPage({ params }: PageProps) {
       <div className="shell py-2">
         <header className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--accent)]">HumanX</p>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--accent)]">VeriPost</p>
             <h1 className="mt-2 text-[30px] font-black leading-none">Verified human proof</h1>
           </div>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent)]">
@@ -97,7 +97,7 @@ export default async function ProofPage({ params }: PageProps) {
           <div className="flex items-start gap-3">
             <Fingerprint aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--blue)]" size={22} />
             <p className="text-sm leading-6 text-[var(--muted)]">
-              World ID proves humanness without publishing the person&apos;s identity. HumanX stores the post text,
+              World ID proves humanness without publishing the person&apos;s identity. VeriPost stores the post text,
               digest, timestamp, and proof commitment.
             </p>
           </div>

@@ -26,7 +26,7 @@ type AppConfig = {
 
 type Phase = "loading" | "ready" | "signing_world" | "creating_proof" | "proof_ready" | "error";
 
-const STORAGE_KEY = "humanx:last-proof";
+const STORAGE_KEY = "veripost:last-proof";
 
 async function readApiError(response: Response): Promise<string> {
   const payload = (await response.json().catch(() => null)) as
@@ -223,7 +223,7 @@ export default function ComposeFlow() {
       <div className="shell pb-28">
         <header className="flex items-center justify-between gap-4 py-2">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--accent)]">HumanX</p>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--accent)]">VeriPost</p>
             <h1 className="mt-2 text-[32px] font-black leading-none tracking-normal">Post as human</h1>
           </div>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent)]">
