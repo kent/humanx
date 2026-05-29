@@ -2,7 +2,7 @@
 
 VeriPost is built as a World Mini App: a mobile-first web app running inside World App through MiniKit, with IDKit proof verification on the backend.
 
-External requirements checked on 2026-05-28:
+External requirements checked on 2026-05-29 UTC:
 
 - World Mini App Store submissions go through the Developer Portal and, after approval, become discoverable in World App.
 - World review expects a final app, complete metadata, a live IDKit or MiniKit integration, review-team access, valid contact details, legal compliance, and reliable Android/iOS behavior.
@@ -68,6 +68,18 @@ These items must be true before sending the first iOS user through World App dis
 - A real iPhone test confirms the iOS flow: open in World App, log in with X, write text, complete World ID proof, return to X Web Intent, post, open proof URL.
 - For a user who does not have World App installed, the user installs World App from the iOS App Store, completes onboarding, returns to VeriPost in World App, and starts the proof again. iOS does not preserve the original verification context through App Store install.
 
+## Verified Readiness
+
+Verified on 2026-05-29 UTC:
+
+- `https://veripost.io` is deployed on Vercel production.
+- GitHub `CI`, `CodeQL`, and `OpenSSF Scorecard` are green for launch commit `530de12`.
+- `https://veripost.io/api/config` reports production World config, X auth config, support email, and proof storage config present.
+- `https://veripost.io/api/health` returns `ok: true` with `proofStorageReachable: true`.
+- `https://veripost.io/privacy` and `https://veripost.io/support` return 200.
+- `POST /api/world/rp-signature` returns a production RP context for `veripost-tweet-proof`.
+- Cross-origin `POST /api/world/rp-signature` requests are rejected by the origin guard.
+
 ## Review Test Flow
 
 1. Open `https://veripost.io` from the Developer Portal Mini App tester or a production World App test link.
@@ -82,9 +94,7 @@ These items must be true before sending the first iOS user through World App dis
 
 ## Current Submission Blockers
 
-- Real Developer Portal app id, RP id, and signing key are required for live verification.
-- X OAuth 2.0 client id/secret are required for X login.
-- Production database env names currently exist in Vercel, but pulled values are empty for `POSTGRES_URL` and `DATABASE_URL`; set one of them to a real Neon/Postgres URL, redeploy, and run `pnpm db:migrate`.
-- Production deployment and GitHub `Verify` status must be confirmed for the launch commit.
-- The first real iPhone/World App test must be completed with production credentials.
-- Legal review should confirm the X-login-only creation flow is acceptable for iOS because X login is required to create an X post, while public proof viewing remains available without login.
+- Submit the Developer Portal listing with the final metadata and assets, then wait for World review approval.
+- Complete the first real iPhone/World App test with a production World ID account and X account.
+- Confirm `support@veripost.io` receives mail and assign an owner for proof reports/deletion requests.
+- Legal review should confirm the X-login-only creation flow and user-submitted proof text/reporting flow are acceptable for iOS review.
