@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getRequestOrigin, getWorldServerConfig } from "@/lib/config";
+import { assertProofStorageConfig, getRequestOrigin, getWorldServerConfig } from "@/lib/config";
 import { errorResponse } from "@/lib/http";
 import { rateLimitRequest } from "@/lib/rate-limit";
 import { assertSameOriginRequest } from "@/lib/request-security";
@@ -18,6 +18,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     assertSameOriginRequest(request);
     const body = requestSchema.parse(await request.json());
     rateLimitRequest(request, "world:rp-signature", { limit: 30, windowMs: 60_000 });
+    assertProofStorageConfig();
     const config = getWorldServerConfig(getRequestOrigin(request));
     const rpContext = createRpContext(config, body.action);
 

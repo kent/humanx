@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { getRequestOrigin, getWorldServerConfig, hasWorldVerificationConfig, hasXLoginConfig } from "@/lib/config";
+import {
+  getRequestOrigin,
+  getWorldServerConfig,
+  hasProofStorageConfig,
+  hasWorldVerificationConfig,
+  hasXLoginConfig,
+} from "@/lib/config";
 import { MAX_POST_TEXT_LENGTH } from "@/lib/text";
 
 export const runtime = "nodejs";
@@ -16,6 +22,7 @@ export function GET(request: Request): NextResponse {
     supportEmail: config.supportEmail,
     hasWorldConfig: hasWorldVerificationConfig(config),
     hasXAuthConfig: hasXLoginConfig(),
+    hasProofStorageConfig: hasProofStorageConfig(),
     maxPostTextLength: MAX_POST_TEXT_LENGTH,
   });
 }

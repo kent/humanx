@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
-import { getRequestOrigin, getWorldServerConfig, hasXLoginConfig } from "@/lib/config";
+import { assertProofStorageConfig, getRequestOrigin, getWorldServerConfig, hasXLoginConfig } from "@/lib/config";
 import { ApiError, errorResponse } from "@/lib/http";
 import { createOrRefreshProof } from "@/lib/proofs";
 import { rateLimitRequest } from "@/lib/rate-limit";
@@ -22,6 +22,7 @@ const requestSchema = z.object({
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     assertSameOriginRequest(request);
+    assertProofStorageConfig();
 
     if (!hasXLoginConfig()) {
       throw new ApiError(401, "x_login_required", "Login with X before posting.");

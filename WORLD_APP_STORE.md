@@ -82,7 +82,7 @@ These items must be true before sending the first iOS user through World App dis
 
 - Real Developer Portal app id, RP id, and signing key are required for live verification.
 - X OAuth 2.0 client id/secret are required for X login.
-- Postgres connection string must be set in production and migrations must be applied.
+- Production database env names currently exist in Vercel, but pulled values are empty for `POSTGRES_URL` and `DATABASE_URL`; set one of them to a real Neon/Postgres URL, redeploy, and run `pnpm db:migrate`.
 - Production deployment and GitHub `Verify` status must be confirmed for the launch commit.
 - The first real iPhone/World App test must be completed with production credentials.
 - Legal review should confirm the X-login-only creation flow is acceptable for iOS because X login is required to create an X post, while public proof viewing remains available without login.

@@ -1,5 +1,6 @@
 import { WORLD_ID_ACTION_DEFAULT } from "@/lib/text";
 import { hasXAuthConfig } from "@/lib/auth";
+import { ApiError } from "@/lib/http";
 
 export type WorldEnvironment = "production" | "staging";
 
@@ -21,6 +22,7 @@ export type PublicAppConfig = {
   supportEmail: string;
   hasWorldConfig: boolean;
   hasXAuthConfig: boolean;
+  hasProofStorageConfig: boolean;
   maxPostTextLength: number;
 };
 
@@ -46,6 +48,22 @@ export function hasWorldVerificationConfig(config: WorldServerConfig): boolean {
 
 export function hasXLoginConfig(): boolean {
   return hasXAuthConfig();
+}
+
+export function hasProofStorageConfig(): boolean {
+  if (process.env.VERCEL_ENV !== "production") {
+    return true;
+  }
+
+  return Boolean(process.env.POSTGRES_URL?.trim() || process.env.DATABASE_URL?.trim());
+}
+
+export function assertProofStorageConfig(): void {
+  if (hasProofStorageConfig()) return;
+
+  throw new ApiError(503, "storage_not_configured", "Proof storage is not configured.", {
+    missing: ["POSTGRES_URL", "DATABASE_URL"],
+  });
 }
 
 export function missingWorldConfig(config: WorldServerConfig): string[] {

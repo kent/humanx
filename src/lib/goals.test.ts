@@ -43,6 +43,7 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain("proofResult && canShowLastProof");
     expect(composeFlow).toContain("/api/world/rp-signature");
     expect(composeFlow).toContain("/api/proofs");
+    expect(composeFlow).toContain("hasProofStorageConfig");
     expect(composeFlow).toContain("window.location.assign(payload.tweetIntentUrl)");
     expect(composeFlow).not.toContain("orbLegacy");
     expect(composeFlow).not.toContain("xPostUrl");

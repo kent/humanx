@@ -21,6 +21,7 @@ type AppConfig = {
   environment: "production" | "staging";
   hasWorldConfig: boolean;
   hasXAuthConfig: boolean;
+  hasProofStorageConfig: boolean;
   maxPostTextLength: number;
 };
 
@@ -106,7 +107,9 @@ export default function ComposeFlow() {
   const username = normalizeXUsername(session?.user?.username);
   const hasXUsername = Boolean(username);
   const busy = phase === "signing_world" || phase === "creating_proof" || status === "loading";
-  const canPost = Boolean(signedIn && hasXUsername && config?.hasWorldConfig && validation.ok && !busy);
+  const canPost = Boolean(
+    signedIn && hasXUsername && config?.hasWorldConfig && config?.hasProofStorageConfig && validation.ok && !busy,
+  );
   const canShowLastProof = Boolean(signedIn && isSavedProofVisibleForDraft(proofResult, username, text));
   const postButtonLabel =
     phase === "signing_world" ? "Sign with World ID" : phase === "creating_proof" ? "Creating proof" : "Post";
@@ -118,6 +121,12 @@ export default function ComposeFlow() {
 
   const startPost = useCallback(async () => {
     if (!config || !signedIn) return;
+    if (!config.hasProofStorageConfig) {
+      setError("Proof storage is not configured.");
+      setPhase("error");
+      return;
+    }
+
     if (!username) {
       setError("X login did not include a username. Sign out and log in with X again.");
       setPhase("error");
@@ -292,6 +301,13 @@ export default function ComposeFlow() {
           <div className="status-line status-warn mt-4 flex gap-2" role="status">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
             <span>World ID signing needs Developer Portal credentials.</span>
+          </div>
+        ) : null}
+
+        {!config?.hasProofStorageConfig && phase !== "loading" ? (
+          <div className="status-line status-warn mt-4 flex gap-2" role="status">
+            <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
+            <span>Proof storage needs a production Postgres URL.</span>
           </div>
         ) : null}
 
