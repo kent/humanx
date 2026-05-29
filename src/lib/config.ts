@@ -54,14 +54,18 @@ export function hasDatabaseProofStorageConfig(): boolean {
   return Boolean(process.env.POSTGRES_URL?.trim() || process.env.DATABASE_URL?.trim());
 }
 
-export function hasProofStorageConfig(): boolean {
-  const hasDatabaseUrl = hasDatabaseProofStorageConfig();
-  const isProductionLaunchRuntime =
+export function isProductionLaunchRuntime(): boolean {
+  return (
     process.env.VERCEL_ENV === "production" ||
     process.env.WORLD_ID_ENVIRONMENT === "production" ||
-    process.env.NEXT_PUBLIC_APP_URL === "https://veripost.io";
+    process.env.NEXT_PUBLIC_APP_URL === "https://veripost.io"
+  );
+}
 
-  if (!isProductionLaunchRuntime) {
+export function hasProofStorageConfig(): boolean {
+  const hasDatabaseUrl = hasDatabaseProofStorageConfig();
+
+  if (!isProductionLaunchRuntime()) {
     return true;
   }
 

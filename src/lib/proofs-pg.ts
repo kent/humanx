@@ -24,6 +24,11 @@ type ProofRow = {
 
 let sql: ReturnType<typeof postgres> | null = null;
 
+function shouldRequireSsl(url: string): boolean {
+  const hostname = new URL(url).hostname;
+  return !["localhost", "127.0.0.1", "::1"].includes(hostname);
+}
+
 function getSql(): ReturnType<typeof postgres> {
   if (sql) return sql;
   const url = process.env.POSTGRES_URL || process.env.DATABASE_URL;
@@ -31,7 +36,7 @@ function getSql(): ReturnType<typeof postgres> {
     throw new ApiError(503, "storage_error", "POSTGRES_URL is not configured.");
   }
   sql = postgres(url, {
-    ssl: url.includes("sslmode=require") || url.includes("vercel-storage.com") || url.includes("neon.tech") ? "require" : undefined,
+    ssl: shouldRequireSsl(url) ? "require" : undefined,
     max: 5,
     idle_timeout: 20,
   });

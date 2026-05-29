@@ -222,6 +222,8 @@ describe("World ID signal binding", () => {
   it("extracts and normalizes nullifiers", () => {
     expect(nullifierToDecimal("0x0f")).toBe("15");
     expect(nullifierToDecimal("42")).toBe("42");
+    expect(() => nullifierToDecimal(`0x${"f".repeat(129)}`)).toThrow("invalid nullifier");
+    expect(() => nullifierToDecimal("1".repeat(161))).toThrow("invalid nullifier");
     expect(
       extractNullifier({
         protocol_version: "4.0",
@@ -291,6 +293,22 @@ describe("World verifier response handling", () => {
       );
 
     await expect(verifyWorldProof(config, payload, fetchImpl as typeof fetch)).rejects.toThrow("did not return a nullifier");
+  });
+
+  it("rejects verifier success responses for session proofs", async () => {
+    const fetchImpl = async () =>
+      new Response(
+        JSON.stringify({
+          success: true,
+          action: "veripost-tweet-proof",
+          environment: "production",
+          session_id: "session_123",
+          results: [{ identifier: "proof_of_human", success: true, nullifier: "0x2a", code: "success" }],
+        }),
+        { status: 200 },
+      );
+
+    await expect(verifyWorldProof(config, payload, fetchImpl as typeof fetch)).rejects.toThrow("session proof");
   });
 
   it("rejects verifier success for unsupported credentials or mismatched action context", async () => {

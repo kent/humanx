@@ -12,7 +12,25 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+type HealthPayload = {
+  ok: boolean;
+  checks: {
+    worldConfig: boolean;
+    xAuthConfig: boolean;
+    proofStorageConfig: boolean;
+    databaseConfigured: boolean;
+    proofStorageReachable: boolean;
+  };
+};
+
+let cachedPayload: { payload: HealthPayload; status: number; expiresAt: number } | null = null;
+
 export async function GET(request: Request): Promise<NextResponse> {
+  const now = Date.now();
+  if (cachedPayload && cachedPayload.expiresAt > now) {
+    return NextResponse.json(cachedPayload.payload, { status: cachedPayload.status });
+  }
+
   const config = getWorldServerConfig(getRequestOrigin(request));
   const databaseConfigured = hasDatabaseProofStorageConfig();
   let proofStorageReachable = !databaseConfigured;
@@ -36,5 +54,9 @@ export async function GET(request: Request): Promise<NextResponse> {
   };
   const ok = Object.values(checks).every(Boolean);
 
-  return NextResponse.json({ ok, checks }, { status: ok ? 200 : 503 });
+  const status = ok ? 200 : 503;
+  const payload = { ok, checks };
+  cachedPayload = { payload, status, expiresAt: now + 15_000 };
+
+  return NextResponse.json(payload, { status });
 }

@@ -11,9 +11,13 @@ if (!url) {
 
 const migrationsDir = path.join(process.cwd(), "migrations");
 const files = (await readdir(migrationsDir)).filter((f) => f.endsWith(".sql")).sort();
+const shouldRequireSsl = (databaseUrl) => {
+  const hostname = new URL(databaseUrl).hostname;
+  return !["localhost", "127.0.0.1", "::1"].includes(hostname);
+};
 
 const sql = postgres(url, {
-  ssl: url.includes("sslmode=require") || url.includes("vercel-storage.com") || url.includes("neon.tech") ? "require" : undefined,
+  ssl: shouldRequireSsl(url) ? "require" : undefined,
   max: 1,
 });
 

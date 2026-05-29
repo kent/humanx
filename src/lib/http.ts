@@ -16,13 +16,19 @@ export class ApiError extends Error {
 }
 
 export function errorResponse(error: unknown): NextResponse {
+  const includeDetails = !(
+    process.env.VERCEL_ENV === "production" ||
+    process.env.WORLD_ID_ENVIRONMENT === "production" ||
+    process.env.NEXT_PUBLIC_APP_URL === "https://veripost.io"
+  );
+
   if (error instanceof ZodError) {
     return NextResponse.json(
       {
         error: {
           code: "invalid_request",
           message: "Request payload is invalid.",
-          details: error.issues,
+          ...(includeDetails ? { details: error.issues } : {}),
         },
       },
       { status: 400 },
@@ -35,7 +41,7 @@ export function errorResponse(error: unknown): NextResponse {
         error: {
           code: error.code,
           message: error.message,
-          details: error.details,
+          ...(includeDetails ? { details: error.details } : {}),
         },
       },
       { status: error.status },

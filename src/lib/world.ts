@@ -10,6 +10,9 @@ import { ApiError } from "@/lib/http";
 
 const encoder = new TextEncoder();
 const ACCEPTED_CREDENTIAL_IDENTIFIER = "proof_of_human";
+const WORLD_VERIFY_TIMEOUT_MS = 10_000;
+const MAX_NULLIFIER_HEX_CHARS = 128;
+const MAX_NULLIFIER_DECIMAL_CHARS = 160;
 
 export type WorldVerifyResponse = {
   success?: boolean;
@@ -138,6 +141,7 @@ export async function verifyWorldProof(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(WORLD_VERIFY_TIMEOUT_MS),
   });
 
   const verifierPayload = (await response.json().catch(() => ({}))) as WorldVerifyResponse;
@@ -170,6 +174,10 @@ export async function verifyWorldProof(
     throw new ApiError(400, "invalid_credential", "World ID verified an unsupported credential.");
   }
 
+  if (verifierPayload.session_id) {
+    throw new ApiError(400, "invalid_proof_type", "World ID verified a session proof.");
+  }
+
   const nullifier = verifierPayload.nullifier ?? successfulResult.nullifier;
   if (!nullifier) {
     throw new ApiError(400, "missing_nullifier", "World ID verification did not return a nullifier.");
@@ -192,11 +200,15 @@ export function extractNullifier(payload: IdKitPayload): string | undefined {
 }
 
 export function nullifierToDecimal(nullifier: string): string {
-  if (/^0x[0-9a-fA-F]+$/.test(nullifier)) {
+  if (new TextEncoder().encode(nullifier).length > MAX_NULLIFIER_DECIMAL_CHARS + 2) {
+    throw new ApiError(400, "invalid_nullifier", "World ID verification returned an invalid nullifier.");
+  }
+
+  if (/^0x[0-9a-fA-F]+$/.test(nullifier) && nullifier.length <= MAX_NULLIFIER_HEX_CHARS + 2) {
     return BigInt(nullifier).toString(10);
   }
 
-  if (/^[0-9]+$/.test(nullifier)) {
+  if (/^[0-9]+$/.test(nullifier) && nullifier.length <= MAX_NULLIFIER_DECIMAL_CHARS) {
     return nullifier;
   }
 

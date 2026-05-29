@@ -7,7 +7,7 @@ import { assertProofStorageConfig, getRequestOrigin, getWorldServerConfig, hasXL
 import { ApiError, errorResponse } from "@/lib/http";
 import { createOrRefreshProof } from "@/lib/proofs";
 import { rateLimitRequest } from "@/lib/rate-limit";
-import { assertSameOriginRequest } from "@/lib/request-security";
+import { assertJsonRequest, assertSameOriginRequest } from "@/lib/request-security";
 import { buildXIntentUrl, normalizeXUsername } from "@/lib/x";
 import { validatePostText } from "@/lib/text";
 import { assertIdKitSignal, hashSignalToField, type IdKitPayload, verifyWorldProof } from "@/lib/world";
@@ -22,6 +22,7 @@ const requestSchema = z.object({
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     assertSameOriginRequest(request);
+    assertJsonRequest(request, 65_536);
     assertProofStorageConfig();
 
     if (!hasXLoginConfig()) {
