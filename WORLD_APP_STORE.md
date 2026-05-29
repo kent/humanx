@@ -62,6 +62,7 @@ These items must be true before sending the first iOS user through World App dis
 - X OAuth 2.0 is live with callback `https://veripost.io/api/auth/callback/twitter` and scopes needed by Auth.js for login.
 - Postgres is provisioned, `POSTGRES_URL` is set in production, and `pnpm db:migrate` has been run.
 - Vercel production deployment uses the commit intended for launch and the GitHub `Verify` check is green.
+- `https://veripost.io/api/health` returns `ok: true` with `proofStorageReachable: true`.
 - `/privacy` and `/support` load publicly and `support@veripost.io` receives mail.
 - Public proof pages include a report path so abusive proof content can be reviewed and removed.
 - A real iPhone test confirms the iOS flow: open in World App, log in with X, write text, complete World ID proof, return to X Web Intent, post, open proof URL.
@@ -77,6 +78,7 @@ These items must be true before sending the first iOS user through World App dis
 6. Confirm X opens in the same webview/window with the proof URL attached.
 7. Open the public proof page and confirm it shows the post text, X username, digest, timestamp, commitment, and report link.
 8. Open `https://veripost.io/privacy` and `https://veripost.io/support`.
+9. Confirm `https://veripost.io/api/health` returns `ok: true`.
 
 ## Current Submission Blockers
 

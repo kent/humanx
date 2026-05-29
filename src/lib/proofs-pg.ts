@@ -73,6 +73,17 @@ export async function pgReadAll(): Promise<StoredProofClaim[]> {
   }
 }
 
+export async function pgCheckProofStorage(): Promise<void> {
+  try {
+    const db = getSql();
+    await db`SELECT id FROM proofs LIMIT 1`;
+  } catch (error) {
+    throw new ApiError(503, "storage_error", "Proof storage is unavailable.", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export async function pgGetById(id: string): Promise<StoredProofClaim | null> {
   try {
     const db = getSql();

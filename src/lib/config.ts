@@ -50,8 +50,12 @@ export function hasXLoginConfig(): boolean {
   return hasXAuthConfig();
 }
 
+export function hasDatabaseProofStorageConfig(): boolean {
+  return Boolean(process.env.POSTGRES_URL?.trim() || process.env.DATABASE_URL?.trim());
+}
+
 export function hasProofStorageConfig(): boolean {
-  const hasDatabaseUrl = Boolean(process.env.POSTGRES_URL?.trim() || process.env.DATABASE_URL?.trim());
+  const hasDatabaseUrl = hasDatabaseProofStorageConfig();
   const isProductionLaunchRuntime =
     process.env.VERCEL_ENV === "production" ||
     process.env.WORLD_ID_ENVIRONMENT === "production" ||
