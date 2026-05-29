@@ -104,6 +104,12 @@ export default async function ProofPage({ params }: PageProps) {
         </section>
 
         <div className="mt-4 grid gap-3">
+          <a
+            className="secondary-button px-4"
+            href={`mailto:support@veripost.io?subject=Report%20VeriPost%20proof%20${encodeURIComponent(proof.id)}`}
+          >
+            Report proof
+          </a>
           <Link className="secondary-button px-4" href="/">
             Post another
           </Link>

@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-HumanX is pre-1.0. Security fixes target the `main` branch.
+VeriPost is pre-1.0. Security fixes target the `main` branch.
 
 ## Reporting a Vulnerability
 
