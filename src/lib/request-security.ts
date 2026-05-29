@@ -53,8 +53,14 @@ export function assertJsonRequest(request: Request, maxBytes: number): void {
 }
 
 export function getClientIp(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const forwardedFor = normalizeClientIp(request.headers.get("x-forwarded-for")?.split(",")[0]);
   if (forwardedFor) return forwardedFor;
 
-  return request.headers.get("x-real-ip")?.trim() || "unknown";
+  return normalizeClientIp(request.headers.get("x-real-ip")) || "unknown";
+}
+
+function normalizeClientIp(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  if (!normalized || normalized.length > 128) return null;
+  return normalized;
 }

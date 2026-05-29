@@ -94,6 +94,17 @@ describe("request origin guards", () => {
 
     expect(getClientIp(request)).toBe("203.0.113.10");
   });
+
+  it("bounds forwarded client IP identifiers for rate limiting", () => {
+    const request = new Request("https://veripost.io/api/proofs", {
+      headers: {
+        "x-forwarded-for": "a".repeat(129),
+        "x-real-ip": "198.51.100.20",
+      },
+    });
+
+    expect(getClientIp(request)).toBe("198.51.100.20");
+  });
 });
 
 describe("JSON request guards", () => {

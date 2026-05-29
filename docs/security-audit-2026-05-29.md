@@ -53,6 +53,10 @@ Postgres TLS was required only for recognized URL patterns. Remote Postgres conn
 
 The public health route could query proof storage on every request. Health results are now cached briefly per runtime instance to reduce database pressure.
 
+### Rate-Limit Key Pressure
+
+Forwarded client IP identifiers were not bounded before use in in-memory rate-limit keys. Client IP identifiers are now capped and the in-memory bucket map has a fixed ceiling.
+
 ### Supply Chain Drift
 
 Patch updates were applied for `@worldcoin/idkit`, `postgres`, `viem`, `wagmi`, and `lucide-react`. This also removed a non-registry `pkg.pr.new` transitive tarball for `ox` from the lockfile.

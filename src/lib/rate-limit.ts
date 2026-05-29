@@ -12,6 +12,7 @@ type Bucket = {
 };
 
 const buckets = new Map<string, Bucket>();
+const MAX_BUCKETS = 10_000;
 
 export function rateLimitRequest(
   request: Request,
@@ -26,6 +27,10 @@ export function rateLimitRequest(
   }
 
   const key = `${scope}:${getClientIp(request)}`;
+  if (!buckets.has(key) && buckets.size >= MAX_BUCKETS) {
+    throw new ApiError(429, "rate_limited", "Too many attempts. Try again shortly.");
+  }
+
   const bucket = buckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
     buckets.set(key, { count: 1, resetAt: now + options.windowMs });
