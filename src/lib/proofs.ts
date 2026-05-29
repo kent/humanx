@@ -47,6 +47,7 @@ export type CreateProofInput = {
 };
 
 const STORE_VERSION = 1;
+const PROOF_ID_PATTERN = /^vp_[A-Za-z0-9_-]{1,80}$/;
 
 export function getStorePath(): string {
   const configuredPath = process.env.VERIPOST_DATA_FILE?.trim() || "proofs.json";
@@ -63,7 +64,11 @@ export function getStorePath(): string {
 }
 
 export function createProofId(): string {
-  return `vp_${randomBytes(10).toString("base64url")}`;
+  return `vp_${randomBytes(16).toString("base64url")}`;
+}
+
+export function isValidProofId(id: string): boolean {
+  return PROOF_ID_PATTERN.test(id);
 }
 
 export function createProofCommitment(id: string, nullifierDecimal: string, draftHash: string): string {
@@ -76,12 +81,12 @@ export function toPublicProof(proof: StoredProofClaim | ProofClaim): PublicProof
   return publicProof as PublicProof;
 }
 
-function usePostgres(): boolean {
+function shouldUsePostgres(): boolean {
   return Boolean(process.env.POSTGRES_URL || process.env.DATABASE_URL);
 }
 
 export async function readProofStore(): Promise<ProofStore> {
-  if (usePostgres()) {
+  if (shouldUsePostgres()) {
     const { pgReadAll } = await import("@/lib/proofs-pg");
     return { proofs: await pgReadAll() };
   }
@@ -101,7 +106,7 @@ export async function readProofStore(): Promise<ProofStore> {
 }
 
 export async function writeProofStore(store: ProofStore): Promise<void> {
-  if (usePostgres()) {
+  if (shouldUsePostgres()) {
     throw new ApiError(500, "storage_error", "writeProofStore is not supported with Postgres; use createOrRefreshProof.");
   }
 
@@ -126,7 +131,7 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
 }> {
   const now = new Date().toISOString();
 
-  if (usePostgres()) {
+  if (shouldUsePostgres()) {
     const { pgUpsertProof } = await import("@/lib/proofs-pg");
     const id = createProofId();
     const commitment = createProofCommitment(id, input.nullifierDecimal, input.draftHash);
@@ -171,7 +176,11 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
 }
 
 export async function getPublicProof(id: string): Promise<PublicProof | null> {
-  if (usePostgres()) {
+  if (!isValidProofId(id)) {
+    return null;
+  }
+
+  if (shouldUsePostgres()) {
     const { pgGetById } = await import("@/lib/proofs-pg");
     const stored = await pgGetById(id);
     return stored ? toPublicProof(stored) : null;

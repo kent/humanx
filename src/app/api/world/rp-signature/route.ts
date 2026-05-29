@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { getRequestOrigin, getWorldServerConfig } from "@/lib/config";
 import { errorResponse } from "@/lib/http";
+import { rateLimitRequest } from "@/lib/rate-limit";
+import { assertSameOriginRequest } from "@/lib/request-security";
 import { createRpContext } from "@/lib/world";
 
 export const runtime = "nodejs";
@@ -13,7 +15,9 @@ const requestSchema = z.object({
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    assertSameOriginRequest(request);
     const body = requestSchema.parse(await request.json());
+    rateLimitRequest(request, "world:rp-signature", { limit: 30, windowMs: 60_000 });
     const config = getWorldServerConfig(getRequestOrigin(request));
     const rpContext = createRpContext(config, body.action);
 

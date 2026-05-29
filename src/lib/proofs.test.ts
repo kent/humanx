@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createOrRefreshProof, getStorePath, readProofStore } from "@/lib/proofs";
+import { createOrRefreshProof, getStorePath, isValidProofId, readProofStore } from "@/lib/proofs";
 
 let dataFile = "";
 
@@ -42,12 +42,21 @@ describe("proof store", () => {
 
     expect(result.createdNew).toBe(true);
     expect(result.proof.id).toMatch(/^vp_/);
+    expect(isValidProofId(result.proof.id)).toBe(true);
     expect(result.proof.xUsername).toBe("alice");
     expect("nullifierDecimal" in result.proof).toBe(false);
 
     const store = await readProofStore();
     expect(store.proofs).toHaveLength(1);
     expect(store.proofs[0].nullifierDecimal).toBe("123");
+  });
+
+  it("rejects malformed public proof ids", () => {
+    expect(isValidProofId("vp_demo_123")).toBe(true);
+    expect(isValidProofId("vp_")).toBe(false);
+    expect(isValidProofId("proof_123")).toBe(false);
+    expect(isValidProofId("vp_../../secret")).toBe(false);
+    expect(isValidProofId(`vp_${"a".repeat(81)}`)).toBe(false);
   });
 
   it("refreshes duplicate proofs without creating another public proof", async () => {

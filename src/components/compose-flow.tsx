@@ -3,7 +3,7 @@
 import { AlertTriangle, CheckCircle2, Loader2, Send, ShieldCheck } from "lucide-react";
 import {
   IDKitRequestWidget,
-  orbLegacy,
+  proofOfHuman,
   type IDKitErrorCodes,
   type IDKitResult,
   type RpContext,
@@ -340,8 +340,8 @@ export default function ComposeFlow() {
             app_id={config.appId as `app_${string}`}
             action={config.action}
             rp_context={rpContext}
-            allow_legacy_proofs={true}
-            preset={orbLegacy({ signal: pendingSignal })}
+            allow_legacy_proofs={false}
+            preset={proofOfHuman({ signal: pendingSignal })}
             environment={config.environment}
             handleVerify={handleVerify}
             onSuccess={() => undefined}

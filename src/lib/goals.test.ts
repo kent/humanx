@@ -37,11 +37,14 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain("parseSavedProofResult");
     expect(composeFlow).toContain("isSavedProofVisibleForDraft");
     expect(composeFlow).toContain("IDKitRequestWidget");
+    expect(composeFlow).toContain("proofOfHuman");
+    expect(composeFlow).toContain("allow_legacy_proofs={false}");
     expect(composeFlow).toContain("handleWidgetOpenChange");
     expect(composeFlow).toContain("proofResult && canShowLastProof");
     expect(composeFlow).toContain("/api/world/rp-signature");
     expect(composeFlow).toContain("/api/proofs");
     expect(composeFlow).toContain("window.location.assign(payload.tweetIntentUrl)");
+    expect(composeFlow).not.toContain("orbLegacy");
     expect(composeFlow).not.toContain("xPostUrl");
     expect(composeFlow).not.toContain("editToken");
   });

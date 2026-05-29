@@ -1,13 +1,15 @@
-import type { IDKitResult, RpContext } from "@worldcoin/idkit";
+import type { RpContext } from "@worldcoin/idkit";
 import { signRequest } from "@worldcoin/idkit/signing";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 
+import type { WorldEnvironment } from "@/lib/config";
 import type { WorldServerConfig } from "@/lib/config";
 import { missingWorldConfig } from "@/lib/config";
 import { ApiError } from "@/lib/http";
 
 const encoder = new TextEncoder();
+const ACCEPTED_CREDENTIAL_IDENTIFIER = "proof_of_human";
 
 export type WorldVerifyResponse = {
   success?: boolean;
@@ -33,13 +35,22 @@ export type WorldVerification = {
   sessionId?: string;
 };
 
-export type IdKitPayload = IDKitResult & {
+export type IdKitPayload = {
+  protocol_version?: string;
+  nonce?: string;
   action?: string;
+  action_description?: string;
   environment?: string;
+  session_id?: string;
   responses?: Array<{
+    identifier?: string;
     signal_hash?: string;
+    proof?: string | string[];
+    merkle_root?: string;
     nullifier?: string;
     session_nullifier?: string[];
+    issuer_schema_id?: number;
+    expires_at_min?: number;
   }>;
 };
 
@@ -75,13 +86,38 @@ export function createRpContext(config: WorldServerConfig, action: string): RpCo
   };
 }
 
-export function assertIdKitSignal(payload: IdKitPayload, action: string, expectedSignalHash: string): void {
-  if (payload.action && payload.action !== action) {
+export function assertIdKitSignal(
+  payload: IdKitPayload,
+  action: string,
+  environment: WorldEnvironment,
+  expectedSignalHash: string,
+): void {
+  if (payload.protocol_version !== "4.0") {
+    throw new ApiError(400, "invalid_proof_type", "The proof response type is not accepted.");
+  }
+
+  if (payload.session_id) {
+    throw new ApiError(400, "invalid_proof_type", "Session proofs cannot create post proofs.");
+  }
+
+  if (payload.action !== action) {
     throw new ApiError(400, "invalid_action", "The proof was created for a different action.");
   }
 
-  const signalHashes = payload.responses?.map((response) => response.signal_hash?.toLowerCase()).filter(Boolean);
-  if (!signalHashes?.includes(expectedSignalHash.toLowerCase())) {
+  if (payload.environment !== environment) {
+    throw new ApiError(400, "invalid_environment", "The proof was created for a different environment.");
+  }
+
+  if (!Array.isArray(payload.responses) || payload.responses.length !== 1) {
+    throw new ApiError(400, "invalid_proof_response", "The proof must contain exactly one credential response.");
+  }
+
+  const response = payload.responses[0];
+  if (response.identifier !== ACCEPTED_CREDENTIAL_IDENTIFIER) {
+    throw new ApiError(400, "invalid_credential", "The proof credential is not accepted.");
+  }
+
+  if (response.signal_hash?.toLowerCase() !== expectedSignalHash.toLowerCase()) {
     throw new ApiError(400, "signal_mismatch", "The proof does not match this post text.");
   }
 }
@@ -105,9 +141,9 @@ export async function verifyWorldProof(
   });
 
   const verifierPayload = (await response.json().catch(() => ({}))) as WorldVerifyResponse;
-  const successfulResult = verifierPayload.results?.find((result) => result.success);
+  const successfulResults = verifierPayload.results?.filter((result) => result.success) ?? [];
 
-  if (!response.ok || !verifierPayload.success || !successfulResult) {
+  if (!response.ok || !verifierPayload.success || successfulResults.length === 0) {
     throw new ApiError(400, "world_verification_failed", "World ID verification failed.", {
       status: response.status,
       message: verifierPayload.message,
@@ -115,7 +151,26 @@ export async function verifyWorldProof(
     });
   }
 
-  const nullifier = verifierPayload.nullifier ?? successfulResult.nullifier ?? extractNullifier(payload);
+  if (successfulResults.length !== 1) {
+    throw new ApiError(400, "ambiguous_world_verification", "World ID verification returned multiple successful proofs.", {
+      results: verifierPayload.results,
+    });
+  }
+
+  const successfulResult = successfulResults[0];
+  if (verifierPayload.action && verifierPayload.action !== config.action) {
+    throw new ApiError(400, "invalid_action", "World ID verified a different action.");
+  }
+
+  if (verifierPayload.environment && verifierPayload.environment !== config.environment) {
+    throw new ApiError(400, "invalid_environment", "World ID verified a different environment.");
+  }
+
+  if (successfulResult.identifier !== ACCEPTED_CREDENTIAL_IDENTIFIER) {
+    throw new ApiError(400, "invalid_credential", "World ID verified an unsupported credential.");
+  }
+
+  const nullifier = verifierPayload.nullifier ?? successfulResult.nullifier;
   if (!nullifier) {
     throw new ApiError(400, "missing_nullifier", "World ID verification did not return a nullifier.");
   }

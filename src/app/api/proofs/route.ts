@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth";
 import { getRequestOrigin, getWorldServerConfig, hasXLoginConfig } from "@/lib/config";
 import { ApiError, errorResponse } from "@/lib/http";
 import { createOrRefreshProof } from "@/lib/proofs";
+import { rateLimitRequest } from "@/lib/rate-limit";
+import { assertSameOriginRequest } from "@/lib/request-security";
 import { buildXIntentUrl, normalizeXUsername } from "@/lib/x";
 import { validatePostText } from "@/lib/text";
 import { assertIdKitSignal, hashSignalToField, type IdKitPayload, verifyWorldProof } from "@/lib/world";
@@ -19,6 +21,8 @@ const requestSchema = z.object({
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    assertSameOriginRequest(request);
+
     if (!hasXLoginConfig()) {
       throw new ApiError(401, "x_login_required", "Login with X before posting.");
     }
@@ -38,12 +42,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!text.ok) {
       throw new ApiError(400, text.code, text.message);
     }
+    rateLimitRequest(request, "proofs:create", { limit: 12, windowMs: 60_000 });
 
     const config = getWorldServerConfig(getRequestOrigin(request));
     const signalHash = hashSignalToField(text.signal);
     const idkitPayload = body.idkitResponse as unknown as IdKitPayload;
 
-    assertIdKitSignal(idkitPayload, config.action, signalHash);
+    assertIdKitSignal(idkitPayload, config.action, config.environment, signalHash);
 
     const worldVerification = await verifyWorldProof(config, idkitPayload);
     const result = await createOrRefreshProof({
