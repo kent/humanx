@@ -11,7 +11,7 @@ No Solidity, Vyper, Foundry, Hardhat, Truffle, or Brownie contract artifacts wer
 - Manual secret pattern scan found only code references, examples, and docs placeholders.
 - `pnpm outdated --format table` showed only `eslint` major-version drift after security dependency patching.
 - `pnpm verify` passed locally after fixes.
-- GitHub `CI`, `CodeQL`, and `OpenSSF Scorecard` passed on pushed commit `e3ad253`.
+- GitHub `CI`, `CodeQL`, and `OpenSSF Scorecard` passed on pushed commit `25401f7`.
 - Production probes after deployment:
   - `POST /api/world/rp-signature` without `Origin` returned `403 missing_origin`.
   - Same-origin JSON `POST /api/world/rp-signature` returned a valid production RP context.
