@@ -51,11 +51,17 @@ export function hasXLoginConfig(): boolean {
 }
 
 export function hasProofStorageConfig(): boolean {
-  if (process.env.VERCEL_ENV !== "production") {
+  const hasDatabaseUrl = Boolean(process.env.POSTGRES_URL?.trim() || process.env.DATABASE_URL?.trim());
+  const isProductionLaunchRuntime =
+    process.env.VERCEL_ENV === "production" ||
+    process.env.WORLD_ID_ENVIRONMENT === "production" ||
+    process.env.NEXT_PUBLIC_APP_URL === "https://veripost.io";
+
+  if (!isProductionLaunchRuntime) {
     return true;
   }
 
-  return Boolean(process.env.POSTGRES_URL?.trim() || process.env.DATABASE_URL?.trim());
+  return hasDatabaseUrl;
 }
 
 export function assertProofStorageConfig(): void {
