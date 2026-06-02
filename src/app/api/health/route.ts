@@ -5,8 +5,7 @@ import {
   getWorldServerConfig,
   hasDatabaseProofStorageConfig,
   hasProofStorageConfig,
-  hasWorldVerificationConfig,
-  hasXLoginConfig,
+  missingWorldConfig,
 } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +15,6 @@ type HealthPayload = {
   ok: boolean;
   checks: {
     worldConfig: boolean;
-    xAuthConfig: boolean;
     proofStorageConfig: boolean;
     databaseConfigured: boolean;
     proofStorageReachable: boolean;
@@ -46,8 +44,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const checks = {
-    worldConfig: hasWorldVerificationConfig(config),
-    xAuthConfig: hasXLoginConfig(),
+    worldConfig: missingWorldConfig(config).length === 0,
     proofStorageConfig: hasProofStorageConfig(),
     databaseConfigured,
     proofStorageReachable,

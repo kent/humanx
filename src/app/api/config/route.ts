@@ -4,8 +4,7 @@ import {
   getRequestOrigin,
   getWorldServerConfig,
   hasProofStorageConfig,
-  hasWorldVerificationConfig,
-  hasXLoginConfig,
+  missingWorldConfig,
 } from "@/lib/config";
 import { MAX_POST_TEXT_LENGTH } from "@/lib/text";
 
@@ -20,8 +19,7 @@ export function GET(request: Request): NextResponse {
     environment: config.environment,
     appUrl: config.appUrl,
     supportEmail: config.supportEmail,
-    hasWorldConfig: hasWorldVerificationConfig(config),
-    hasXAuthConfig: hasXLoginConfig(),
+    hasWorldConfig: missingWorldConfig(config).length === 0,
     hasProofStorageConfig: hasProofStorageConfig(),
     maxPostTextLength: MAX_POST_TEXT_LENGTH,
   });

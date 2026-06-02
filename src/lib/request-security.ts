@@ -1,7 +1,14 @@
 import { ApiError } from "@/lib/http";
 import { isProductionLaunchRuntime } from "@/lib/config";
 
-export function assertSameOriginRequest(request: Request): void {
+type SameOriginRequestOptions = {
+  allowMissingProvenanceHeader?: {
+    name: string;
+    value: string | string[];
+  };
+};
+
+export function assertSameOriginRequest(request: Request, options: SameOriginRequestOptions = {}): void {
   const fetchSite = request.headers.get("sec-fetch-site");
   if (fetchSite === "cross-site") {
     throw new ApiError(403, "invalid_origin", "The request origin is not accepted.");
@@ -10,6 +17,21 @@ export function assertSameOriginRequest(request: Request): void {
   const originHeader = request.headers.get("origin");
   const refererHeader = request.headers.get("referer");
   if (!originHeader && !refererHeader) {
+    if (fetchSite === "same-origin") return;
+
+    const allowedMissingProvenanceHeader = options.allowMissingProvenanceHeader;
+    const allowedMissingProvenanceValues = Array.isArray(allowedMissingProvenanceHeader?.value)
+      ? allowedMissingProvenanceHeader.value
+      : allowedMissingProvenanceHeader
+        ? [allowedMissingProvenanceHeader.value]
+        : [];
+    if (
+      allowedMissingProvenanceHeader &&
+      allowedMissingProvenanceValues.includes(request.headers.get(allowedMissingProvenanceHeader.name) ?? "")
+    ) {
+      return;
+    }
+
     if (isProductionLaunchRuntime()) {
       throw new ApiError(403, "missing_origin", "The request origin is required.");
     }

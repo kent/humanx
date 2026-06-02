@@ -35,8 +35,8 @@ export default function SupportPage() {
         <section className="surface mt-4 p-5">
           <h2 className="text-base font-black">Include</h2>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            Send the proof URL or proof id, the X username involved, your device type, and the steps that led to the
-            issue. Do not send World signing keys, private OAuth secrets, or raw proof material.
+            Send the proof URL or proof id, your device type, and the steps that led to the issue. Do not send private
+            keys, recovery phrases, or other secrets.
           </p>
         </section>
 

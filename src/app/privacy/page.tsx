@@ -24,25 +24,25 @@ export default function PrivacyPage() {
         <section className="surface mt-6 p-5">
           <h2 className="text-base font-black">What VeriPost Stores</h2>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            When you create a proof, VeriPost stores the post text, X username, proof id, text digest, signal hash,
-            proof commitment, verification timestamp, and non-public World ID nullifier needed to prevent duplicate
-            proof reuse for the same action.
+            When you create a proof, VeriPost stores the post text, proof id, text digest, signal hash, proof
+            commitment, verification timestamp, and a non-public address-derived verifier needed to prevent duplicate
+            proof reuse for the same post text.
           </p>
         </section>
 
         <section className="surface mt-4 p-5">
           <h2 className="text-base font-black">What Stays Private</h2>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            Public proof pages do not publish your World ID identity, raw proof material, or full nullifier. Proof pages
-            are public if you share them, and the post text on a proof page should be treated as public.
+            Public proof pages do not publish your wallet address, World ID identity, or verifier value. Proof pages are
+            public if you share them, and the post text on a proof page should be treated as public.
           </p>
         </section>
 
         <section className="surface mt-4 p-5">
           <h2 className="text-base font-black">Services Used</h2>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            VeriPost uses X login to confirm the posting account and forwards World ID proof responses to the World
-            verifier. Request IP addresses may be processed temporarily for rate limiting and abuse prevention.
+            VeriPost checks the submitted World App wallet against the World ID Address Book on the backend before
+            storing a proof. Request IP addresses may be processed temporarily for rate limiting and abuse prevention.
           </p>
         </section>
 

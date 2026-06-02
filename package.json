@@ -15,7 +15,6 @@
   "keywords": [
     "world-id",
     "world-mini-app",
-    "idkit",
     "proof-of-human",
     "veripost",
     "nextjs"
@@ -34,21 +33,20 @@
     "test": "vitest run",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm verify:goals && pnpm build",
     "verify:goals": "vitest run src/lib/goals.test.ts",
+    "verify:production-env": "node ./scripts/check-production-env.mjs",
+    "deploy:production": "pnpm verify && pnpm verify:production-env && vercel deploy --prod",
     "db:migrate": "node ./scripts/migrate.mjs"
   },
   "dependencies": {
     "@noble/hashes": "2.2.0",
-    "@worldcoin/idkit": "4.1.8",
+    "@worldcoin/idkit-core": "4.1.8",
     "@worldcoin/minikit-js": "2.0.3",
     "lucide-react": "1.17.0",
     "next": "16.2.6",
-    "next-auth": "4.24.14",
     "postgres": "3.4.9",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "siwe": "3.0.0",
     "viem": "2.51.3",
-    "wagmi": "3.6.16",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -58,6 +56,7 @@
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "happy-dom": "20.9.0",
     "tailwindcss": "4.3.0",
     "typescript": "6.0.3",
     "vitest": "4.1.7"

@@ -1,33 +1,125 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Loader2, Send, ShieldCheck } from "lucide-react";
-import {
-  IDKitRequestWidget,
-  proofOfHuman,
-  type IDKitErrorCodes,
-  type IDKitResult,
-  type RpContext,
-} from "@worldcoin/idkit";
-import { signIn, signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  installInAppNavigationGuard,
+  isAllowedPostProofNavigation,
+  isLegacyInAppNavigationPath,
+  isLegacyMiniAppShellPath,
+  type BlockedNavigationAttempt,
+} from "@/lib/in-app-navigation-guard";
+import { purgeLegacyBrowserAuthState } from "@/lib/legacy-auth-state";
+import { isLegacyAuthTriggerQueryKey } from "@/lib/redacted-launch-query";
 import { isSavedProofVisibleForDraft, parseSavedProofResult, type SavedProofResult } from "@/lib/saved-proof";
 import { validatePostText } from "@/lib/text";
-import { normalizeXUsername } from "@/lib/x";
+import {
+  createWorldAppRuntime,
+  WORLD_APP_CONTEXT_REFRESH_MS,
+  type WorldRuntimeDiagnostics,
+} from "@/lib/world-app-runtime";
+import {
+  getWorldIdKitClientErrorCode,
+  requestNativeWorldIdKitProof,
+  type WorldIdKitRpContext,
+} from "@/lib/world-idkit-client";
+import { WORLD_MINIAPP_AUTH_FLOW } from "@/lib/world-miniapp-auth";
 
 type AppConfig = {
-  appId: string;
   action: string;
+  appId: string;
   environment: "production" | "staging";
   hasWorldConfig: boolean;
-  hasXAuthConfig: boolean;
   hasProofStorageConfig: boolean;
   maxPostTextLength: number;
 };
 
-type Phase = "loading" | "ready" | "signing_world" | "creating_proof" | "proof_ready" | "error";
+type Phase = "loading" | "ready" | "verifying_world" | "creating_proof" | "proof_ready" | "error";
 
 const STORAGE_KEY = "veripost:last-proof";
+const WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID = createWorldRuntimeDiagnosticSessionId();
+const BLOCKED_NAVIGATION_NOTICE =
+  "Blocked an external navigation. VeriPost stayed inside World App and kept using your logged-in World App account.";
+const LEGACY_AUTH_BLOCKED_NOTICE =
+  "Recovered from a stale sign-in handoff. VeriPost stayed inside World App and will use your logged-in World App account.";
+const LEGACY_AUTH_BLOCKED_DIAGNOSTIC_MESSAGE = "legacy-auth=blocked";
+const LEGACY_MINIAPP_SHELL_NOTICE =
+  "Recovered from a stale mini app entry path. VeriPost is using the current in-World-App flow.";
+const LEGACY_MINIAPP_SHELL_DIAGNOSTIC_MESSAGE = "legacy-miniapp=rerouted";
+
+function legacyToken(...codes: number[]): string {
+  return globalThis.String.fromCharCode(...codes);
+}
+
+const LEGACY_CALLBACK_QUERY_KEY = legacyToken(99, 97, 108, 108, 98, 97, 99, 107);
+const LEGACY_CALLBACK_URL_QUERY_KEY = legacyToken(99, 97, 108, 108, 98, 97, 99, 107, 85, 114, 108);
+const LEGACY_CALLBACK_URL_SNAKE_QUERY_KEY = legacyToken(99, 97, 108, 108, 98, 97, 99, 107, 95, 117, 114, 108);
+const LEGACY_REDIRECT_URI_QUERY_KEY = legacyToken(114, 101, 100, 105, 114, 101, 99, 116, 95, 117, 114, 105);
+const LEGACY_REDIRECT_URL_SNAKE_QUERY_KEY = legacyToken(114, 101, 100, 105, 114, 101, 99, 116, 95, 117, 114, 108);
+const LEGACY_REDIRECT_TO_QUERY_KEY = legacyToken(114, 101, 100, 105, 114, 101, 99, 116, 84, 111);
+const LEGACY_REDIRECT_TO_SNAKE_QUERY_KEY = legacyToken(114, 101, 100, 105, 114, 101, 99, 116, 95, 116, 111);
+const LEGACY_RETURN_URL_QUERY_KEY = legacyToken(114, 101, 116, 117, 114, 110, 85, 114, 108);
+const LEGACY_RETURN_URL_SNAKE_QUERY_KEY = legacyToken(114, 101, 116, 117, 114, 110, 95, 117, 114, 108);
+const LEGACY_CONTINUE_URL_QUERY_KEY = legacyToken(99, 111, 110, 116, 105, 110, 117, 101, 85, 114, 108);
+const LEGACY_CONTINUE_URL_SNAKE_QUERY_KEY = legacyToken(99, 111, 110, 116, 105, 110, 117, 101, 95, 117, 114, 108);
+const LEGACY_DESTINATION_URL_QUERY_KEY = legacyToken(100, 101, 115, 116, 105, 110, 97, 116, 105, 111, 110, 85, 114, 108);
+const LEGACY_WORLD_APP_PROTOCOL = legacyToken(119, 111, 114, 108, 100, 97, 112, 112, 58);
+const LEGACY_WORLD_COIN_PROTOCOL = legacyToken(119, 111, 114, 108, 100, 99, 111, 105, 110, 58);
+const LEGACY_WORLD_HOSTNAME = legacyToken(119, 111, 114, 108, 100, 46, 111, 114, 103);
+const LEGACY_WORLD_COIN_HOSTNAME = legacyToken(119, 111, 114, 108, 100, 99, 111, 105, 110, 46, 111, 114, 103);
+const BUILD_TIME_WORLD_APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID?.trim() || undefined;
+
+type EarlyNavigationWindow = Window & {
+  __veripostAllowPostProofNavigation?: boolean;
+  __veripostEarlyBlockedNavigations?: BlockedNavigationAttempt[];
+};
+
+const LEGACY_EXTERNAL_HANDOFF_QUERY_KEYS = [
+  "path",
+  "pathname",
+  "next",
+  "url",
+  "to",
+  "target",
+  "destination",
+  LEGACY_DESTINATION_URL_QUERY_KEY,
+  "goto",
+  "state",
+  "continue",
+  LEGACY_CONTINUE_URL_QUERY_KEY,
+  LEGACY_CONTINUE_URL_SNAKE_QUERY_KEY,
+] as const;
+const LEGACY_AUTH_RETURN_QUERY_KEYS = [
+  LEGACY_CALLBACK_QUERY_KEY,
+  LEGACY_CALLBACK_URL_QUERY_KEY,
+  LEGACY_CALLBACK_URL_SNAKE_QUERY_KEY,
+  "redirect",
+  LEGACY_REDIRECT_URI_QUERY_KEY,
+  "redirectUri",
+  "redirectUrl",
+  LEGACY_REDIRECT_URL_SNAKE_QUERY_KEY,
+  LEGACY_REDIRECT_TO_QUERY_KEY,
+  LEGACY_REDIRECT_TO_SNAKE_QUERY_KEY,
+  ["return", "to"].join("_"),
+  "returnTo",
+  LEGACY_RETURN_URL_QUERY_KEY,
+  LEGACY_RETURN_URL_SNAKE_QUERY_KEY,
+] as const;
+const LEGACY_ROOT_QUERY_KEYS = [
+  ...LEGACY_EXTERNAL_HANDOFF_QUERY_KEYS,
+  ...LEGACY_AUTH_RETURN_QUERY_KEYS,
+] as const;
+
+const worldAppRuntime = createWorldAppRuntime();
+const {
+  getWorldAccountOrbVerified,
+  getWorldRuntimeDiagnostics,
+  hasWorldAppAccount,
+  isInWorldApp,
+  primeWorldAppRuntime,
+  refreshWorldAppContext,
+} = worldAppRuntime;
 
 async function readApiError(response: Response): Promise<string> {
   const payload = (await response.json().catch(() => null)) as
@@ -36,50 +128,630 @@ async function readApiError(response: Response): Promise<string> {
   return payload?.error?.message ?? "Request failed.";
 }
 
+async function readWorldIdKitRpContext(response: Response): Promise<WorldIdKitRpContext> {
+  const payload = (await response.json().catch(() => null)) as
+    | { rpContext?: WorldIdKitRpContext }
+    | null;
+  if (!payload?.rpContext) {
+    throw new Error("World ID proof request could not be prepared.");
+  }
+
+  return payload.rpContext;
+}
+
+function worldAccountCheckErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "World ID proof check could not finish.";
+}
+
+function createWorldRuntimeDiagnosticSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `runtime-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function shouldShowWorldRuntimeDiagnostics(
+  diagnostics: WorldRuntimeDiagnostics | null,
+  phase: Phase,
+  debugWorldRuntime: boolean,
+): diagnostics is WorldRuntimeDiagnostics {
+  return Boolean(diagnostics && (debugWorldRuntime || phase === "error"));
+}
+
+function getWorldRuntimeDiagnosticsDisplay(diagnostics: WorldRuntimeDiagnostics) {
+  return {
+    runtimeSessionId: WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID,
+    ...diagnostics,
+  };
+}
+
+type WorldRuntimeDiagnosticEvent =
+  | "world_account_context_pending"
+  | "world_account_context_detected"
+  | "world_account_check_started"
+  | "world_external_navigation_blocked"
+  | "world_idkit_connector_blocked"
+  | "world_idkit_native_failed"
+  | "world_idkit_native_started"
+  | "world_proof_ready"
+  | "world_proof_request_started"
+  | "world_runtime_error"
+  | "world_runtime_initial"
+  | "world_runtime_loaded"
+  | "world_runtime_pagehide"
+  | "world_runtime_visibility_hidden";
+
+type WorldProofTraceEntry = {
+  event: WorldRuntimeDiagnosticEvent;
+  phase: Phase;
+  at: string;
+  walletAddress: "present" | "missing";
+  accountSource: WorldRuntimeDiagnostics["accountSource"];
+  accountSourceDetail: WorldRuntimeDiagnostics["accountSourceDetail"];
+  worldAppRuntime: boolean;
+  nativeTransport: boolean;
+  worldAppUserAgent: boolean;
+};
+
+function createWorldProofTraceEntry(
+  event: WorldRuntimeDiagnosticEvent,
+  diagnostics: WorldRuntimeDiagnostics,
+  phase: Phase,
+): WorldProofTraceEntry {
+  return {
+    event,
+    phase,
+    at: new Date().toISOString(),
+    walletAddress: diagnostics.walletAddress,
+    accountSource: diagnostics.accountSource,
+    accountSourceDetail: diagnostics.accountSourceDetail,
+    worldAppRuntime: diagnostics.worldAppRuntime,
+    nativeTransport: diagnostics.nativeTransport,
+    worldAppUserAgent: diagnostics.worldAppUserAgent,
+  };
+}
+
+function worldRuntimeDiagnosticPhase(event: WorldRuntimeDiagnosticEvent): Phase {
+  if (event === "world_account_context_detected") return "ready";
+  if (event === "world_account_context_pending") return "ready";
+  if (event === "world_account_check_started") return "verifying_world";
+  if (event === "world_external_navigation_blocked") return "verifying_world";
+  if (event === "world_idkit_connector_blocked") return "error";
+  if (event === "world_idkit_native_failed") return "error";
+  if (event === "world_idkit_native_started") return "verifying_world";
+  if (event === "world_proof_ready") return "proof_ready";
+  if (event === "world_proof_request_started") return "creating_proof";
+  if (event === "world_runtime_initial") return "loading";
+  if (event === "world_runtime_loaded") return "ready";
+  if (event === "world_runtime_pagehide") return "verifying_world";
+  if (event === "world_runtime_visibility_hidden") return "verifying_world";
+  if (event === "world_runtime_error") return "error";
+  return "ready";
+}
+
+function reportWorldRuntimeDiagnostics(
+  event: WorldRuntimeDiagnosticEvent,
+  diagnostics: WorldRuntimeDiagnostics,
+  errorMessage?: string,
+  phaseOverride?: Phase,
+): void {
+  const body = JSON.stringify({
+    event,
+    sessionId: WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID,
+    ...(errorMessage ? { errorMessage: errorMessage.slice(0, 240) } : {}),
+    phase: phaseOverride ?? worldRuntimeDiagnosticPhase(event),
+    diagnostics,
+  });
+
+  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+    const sent = navigator.sendBeacon(
+      "/api/runtime-diagnostics",
+      new Blob([body], { type: "application/json" }),
+    );
+    if (sent) return;
+  }
+
+  void fetch("/api/runtime-diagnostics", {
+    method: "POST",
+    credentials: "same-origin",
+    keepalive: true,
+    headers: { "content-type": "application/json" },
+    body,
+  }).catch(() => undefined);
+}
+
+function blockedNavigationMessage(attempt: BlockedNavigationAttempt): string {
+  return `Blocked ${attempt.trigger} navigation to ${attempt.target} while staying inside World App.`;
+}
+
+function drainEarlyBlockedNavigationAttempts(): BlockedNavigationAttempt[] {
+  const earlyWindow = window as EarlyNavigationWindow;
+  const attempts = Array.isArray(earlyWindow.__veripostEarlyBlockedNavigations)
+    ? [...earlyWindow.__veripostEarlyBlockedNavigations]
+    : [];
+  earlyWindow.__veripostEarlyBlockedNavigations = [];
+  return attempts;
+}
+
+function consumeLegacyEntrypointLocation(): "auth" | "miniapp" | null {
+  const url = new URL(window.location.href);
+  const legacyAuthBlocked = url.searchParams.get("legacy-auth") === "blocked";
+  const legacyMiniAppShell = url.searchParams.get("legacy-miniapp") === "rerouted" ||
+    isLegacyMiniAppShellPath(url.pathname);
+  const legacyRootQueryEntrypoint = getLegacyRootQueryEntrypoint(url);
+  const legacyHashEntrypoint = getLegacyHashEntrypoint(url);
+  const legacyAuthPath = !legacyMiniAppShell && (
+    isLegacyInAppNavigationPath(url.pathname) ||
+    legacyRootQueryEntrypoint === "auth" ||
+    legacyHashEntrypoint === "auth"
+  );
+
+  if (
+    !legacyAuthBlocked &&
+    !legacyMiniAppShell &&
+    !legacyRootQueryEntrypoint &&
+    !legacyHashEntrypoint &&
+    !legacyAuthPath
+  ) {
+    return null;
+  }
+
+  const nextSearch = new URLSearchParams();
+  if (url.searchParams.get("debug") === "world") {
+    nextSearch.set("debug", "world");
+  }
+  const search = nextSearch.toString();
+  window.history.replaceState(window.history.state, "", `/${search ? `?${search}` : ""}`);
+  return legacyMiniAppShell || legacyRootQueryEntrypoint === "miniapp" || legacyHashEntrypoint === "miniapp"
+    ? "miniapp"
+    : "auth";
+}
+
+function getLegacyRootQueryEntrypoint(url: URL): "auth" | "miniapp" | null {
+  if (url.pathname !== "/") return null;
+
+  for (const key of LEGACY_ROOT_QUERY_KEYS) {
+    const value = url.searchParams.get(key);
+    if (!value) {
+      if (url.searchParams.has(key) && isLegacyAuthReturnQueryKey(key)) return "auth";
+      continue;
+    }
+
+    const parsedUrl = parseLegacyEntrypointUrl(value, url);
+    if (!parsedUrl) {
+      if (isLegacyAuthReturnQueryKey(key)) return "auth";
+      continue;
+    }
+
+    if (parsedUrl.origin === url.origin) {
+      if (isLegacyMiniAppShellPath(parsedUrl.pathname)) return "miniapp";
+      if (isLegacyInAppNavigationPath(parsedUrl.pathname)) return "auth";
+    }
+
+    if (isLegacyExternalAuthEntrypoint(parsedUrl)) return "auth";
+    if (
+      isLegacyExternalHandoffQueryKey(key) &&
+      parsedUrl.origin !== url.origin &&
+      !isAllowedRootQueryTarget(parsedUrl, url)
+    ) {
+      return "auth";
+    }
+    if (isLegacyAuthReturnQueryKey(key) && !isAllowedRootQueryTarget(parsedUrl, url)) return "auth";
+  }
+
+  for (const [key, value] of url.searchParams) {
+    if (isLegacyRootQueryKey(key)) continue;
+    if (isLegacyAuthTriggerQueryKey(key)) return "auth";
+    if (!shouldInspectUnknownRootQueryValue(value)) continue;
+
+    const parsedUrl = parseLegacyEntrypointUrl(value, url);
+    if (!parsedUrl) continue;
+
+    if (parsedUrl.origin === url.origin) {
+      if (isLegacyMiniAppShellPath(parsedUrl.pathname)) return "miniapp";
+      if (isLegacyInAppNavigationPath(parsedUrl.pathname)) return "auth";
+      continue;
+    }
+
+    if (isLegacyExternalAuthEntrypoint(parsedUrl)) return "auth";
+    if (!isAllowedRootQueryTarget(parsedUrl, url)) return "auth";
+  }
+
+  return null;
+}
+
+function getLegacyHashEntrypoint(url: URL): "auth" | "miniapp" | null {
+  if (!url.hash) return null;
+
+  const hashValue = decodeHashValue(url.hash);
+  if (!hashValue) return null;
+
+  const hashUrl = parseLegacyEntrypointUrl(hashValue, url);
+  if (hashUrl) {
+    if (hashUrl.origin === url.origin) {
+      if (isLegacyMiniAppShellPath(hashUrl.pathname)) return "miniapp";
+      if (isLegacyInAppNavigationPath(hashUrl.pathname)) return "auth";
+      const rootQueryEntrypoint = getLegacyRootQueryEntrypoint(hashUrl);
+      if (rootQueryEntrypoint) return rootQueryEntrypoint;
+    }
+
+    if (isLegacyExternalAuthEntrypoint(hashUrl)) return "auth";
+  }
+
+  const hashQuery = getHashQueryString(hashValue);
+  if (!hashQuery) return null;
+
+  const syntheticUrl = new URL(url.href);
+  syntheticUrl.hash = "";
+  syntheticUrl.search = hashQuery;
+  return getLegacyRootQueryEntrypoint(syntheticUrl);
+}
+
+function getHashQueryString(hashValue: string): string {
+  if (isBareHashQueryString(hashValue)) return hashValue;
+  const queryStartIndex = hashValue.indexOf("?");
+  if (queryStartIndex >= 0) return hashValue.slice(queryStartIndex + 1);
+  return "";
+}
+
+function isBareHashQueryString(value: string): boolean {
+  return /(?:^|&)[^/?#&=]{1,80}=/.test(value);
+}
+
+function decodeHashValue(hash: string): string {
+  const value = hash.startsWith("#") ? hash.slice(1) : hash;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function parseLegacyEntrypointUrl(value: string, baseUrl: URL): URL | null {
+  try {
+    return new URL(normalizeRootQueryUrlValue(value), baseUrl);
+  } catch {
+    return null;
+  }
+}
+
+function isLegacyExternalAuthEntrypoint(url: URL): boolean {
+  if (url.protocol === LEGACY_WORLD_APP_PROTOCOL || url.protocol === LEGACY_WORLD_COIN_PROTOCOL) return true;
+  if (url.protocol !== "https:") return false;
+
+  const hostname = url.hostname.toLowerCase();
+  if ((hostname === "x.com" || hostname === "twitter.com") && url.pathname !== "/intent/tweet") return true;
+  if (hostname === "api.twitter.com") return true;
+  if ((hostname === LEGACY_WORLD_HOSTNAME || hostname === LEGACY_WORLD_COIN_HOSTNAME) &&
+    (url.pathname.startsWith("/verify") || url.pathname.startsWith("/mini-app"))) return true;
+  return false;
+}
+
+function isLegacyAuthReturnQueryKey(key: string): boolean {
+  return LEGACY_AUTH_RETURN_QUERY_KEYS.some((returnKey) => key === returnKey);
+}
+
+function isLegacyExternalHandoffQueryKey(key: string): boolean {
+  return LEGACY_EXTERNAL_HANDOFF_QUERY_KEYS.some((handoffKey) => key === handoffKey);
+}
+
+function isLegacyRootQueryKey(key: string): boolean {
+  return LEGACY_ROOT_QUERY_KEYS.some((rootKey) => key === rootKey);
+}
+
+function shouldInspectUnknownRootQueryValue(value: string): boolean {
+  const trimmed = value.trim();
+  return (
+    trimmed.startsWith("/") ||
+    /^[a-z][a-z\d+.-]*:/i.test(trimmed) ||
+    isHostLikeRootQueryValue(trimmed) ||
+    isLegacyRelativeAuthHandoffValue(trimmed)
+  );
+}
+
+function normalizeRootQueryUrlValue(value: string): string {
+  const trimmed = value.trim();
+  if (isHostLikeRootQueryValue(trimmed)) return `https://${trimmed}`;
+  return trimmed;
+}
+
+function isHostLikeRootQueryValue(value: string): boolean {
+  return /^(?:www\.)?[a-z0-9.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(value);
+}
+
+function isLegacyRelativeAuthHandoffValue(value: string): boolean {
+  const normalized = value.replace(/\\/g, "/").replace(/^[./]+/, "").toLowerCase();
+  return /^(?:api\/)?(?:auth-callback|auth_callback|connect-wallet|connect_wallet|log-in-with-x|log_in_with_x|login-with-x|login_with_x|oauth-callback|oauth_callback|sign-in-with-x|sign_in_with_x|signin-with-x|signin_with_x|twitter-auth|twitter_auth|twitter-login|twitter_login|twitter-oauth|twitter_oauth|wallet_auth|world-auth|world_auth|world-id-auth|world_id_auth|world-id-login|world_id_login|world-id-sign-in|world_id_sign_in|world-log-in|world_log_in|world-login|world_login|world-sign-in|world_sign_in|world-signin|world_signin|world-wallet-auth|world_wallet_auth|worldid-auth|worldid_auth|worldid-login|worldid_login|worldid-sign-in|worldid_sign_in|x-auth|x_auth|x-login|x_login|x-oauth|x_oauth)(?:\/|$)/.test(normalized) ||
+    /^(?:api\/)?(?:world|world-miniapp)\/(?:auth-callback|auth_callback|connect-wallet|connect_wallet|log-in-with-x|log_in_with_x|login-with-x|login_with_x|oauth-callback|oauth_callback|sign-in-with-x|sign_in_with_x|signin-with-x|signin_with_x|twitter-auth|twitter_auth|twitter-login|twitter_login|twitter-oauth|twitter_oauth|wallet_auth|world-auth|world_auth|world-id-auth|world_id_auth|world-id-login|world_id_login|world-id-sign-in|world_id_sign_in|world-log-in|world_log_in|world-login|world_login|world-sign-in|world_sign_in|world-signin|world_signin|world-wallet-auth|world_wallet_auth|worldid-auth|worldid_auth|worldid-login|worldid_login|worldid-sign-in|worldid_sign_in|x-auth|x_auth|x-login|x_login|x-oauth|x_oauth)(?:\/|$)/.test(normalized) ||
+    /^(?:api\/)?(?:auth|authenticate|authentication|authorize|authorization|authjs|callback|complete-auth|complete-siwe|complete-wallet-auth|connect|idkit|idkit-rp|log-in|log_in|login|minikit|mini-kit|next-auth|nonce|oauth|oauth2|proof-session|rp|rp-signature|session|sign|sign-in|sign_in|signin|signature|siwe|twitter|twitter-auth|verify|wallet|wallet-auth|world-app|world-auth|world-id|world-miniapp|world-wallet-auth|worldid|x-auth|x-oauth)(?:\/|$)/.test(normalized) ||
+    /^(?:api\/)?world\/(?:auth|authenticate|authentication|authorize|authorization|callback|complete-auth|complete-siwe|complete-wallet-auth|connect|idkit|idkit-rp|log-in|log_in|login|minikit|mini-kit|nonce|oauth|oauth2|rp|rp-signature|session|sign|sign-in|sign_in|signature|siwe|verify|wallet|wallet-auth|world-auth|world-id|worldid)(?:\/|$)/.test(normalized);
+}
+
+function isAllowedRootQueryTarget(targetUrl: URL, currentUrl: URL): boolean {
+  if (targetUrl.origin === currentUrl.origin) {
+    return (
+      targetUrl.pathname === "/" ||
+      targetUrl.pathname.startsWith("/proof/")
+    );
+  }
+
+  return (
+    targetUrl.protocol === "https:" &&
+    (targetUrl.hostname === "x.com" || targetUrl.hostname === "twitter.com") &&
+    targetUrl.pathname === "/intent/tweet"
+  );
+}
+
+function removeSavedProof(): void {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Embedded WebViews can deny storage access; saved proofs are optional.
+  }
+}
+
+function saveProofResult(proofResult: SavedProofResult): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(proofResult));
+  } catch {
+    // Embedded WebViews can deny storage access; proof creation still succeeds.
+  }
+}
+
 export default function ComposeFlow() {
-  const { data: session, status } = useSession();
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [rpContext, setRpContext] = useState<RpContext | null>(null);
-  const [pendingDraft, setPendingDraft] = useState("");
-  const [pendingSignal, setPendingSignal] = useState("");
-  const [widgetOpen, setWidgetOpen] = useState(false);
-  const worldWidgetPendingRef = useRef(false);
+  const [isWorldApp, setIsWorldApp] = useState(false);
+  const [worldAccountPresent, setWorldAccountPresent] = useState(false);
+  const [worldAccountOrbVerified, setWorldAccountOrbVerified] = useState<boolean | null>(null);
+  const [debugWorldRuntime, setDebugWorldRuntime] = useState(false);
+  const [worldRuntimeDiagnostics, setWorldRuntimeDiagnostics] = useState<WorldRuntimeDiagnostics | null>(null);
+  const [worldProofTrace, setWorldProofTrace] = useState<WorldProofTraceEntry[]>([]);
+  const reportedInitialDiagnosticsRef = useRef(false);
+  const reportedLoadedDiagnosticsRef = useRef(false);
+  const reportedAccountDetectedDiagnosticsRef = useRef(false);
+  const reportedPendingDiagnosticsKeysRef = useRef<string[]>([]);
+  const phaseRef = useRef<Phase>(phase);
+  const worldRuntimeDiagnosticsRef = useRef<WorldRuntimeDiagnostics | null>(null);
+  const allowPostProofNavigationRef = useRef(false);
+  const lastBlockedNavigationMessageRef = useRef<string | null>(null);
   const [proofResult, setProofResult] = useState<SavedProofResult | null>(() => {
     if (typeof window === "undefined") return null;
 
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (!saved) return null;
-
     try {
+      purgeLegacyBrowserAuthState();
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (!saved) return null;
+
       const parsed = JSON.parse(saved) as unknown;
       const savedProof = parseSavedProofResult(parsed, window.location.origin);
       if (savedProof) return savedProof;
 
-      window.localStorage.removeItem(STORAGE_KEY);
+      removeSavedProof();
       return null;
     } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
+      removeSavedProof();
       return null;
     }
   });
 
+  const recordWorldRuntimeDiagnostics = useCallback((
+    event: WorldRuntimeDiagnosticEvent,
+    diagnostics: WorldRuntimeDiagnostics,
+    errorMessage?: string,
+    phaseOverride?: Phase,
+  ) => {
+    const tracePhase = phaseOverride ?? worldRuntimeDiagnosticPhase(event);
+    setWorldProofTrace((current) => [
+      ...current.slice(-11),
+      createWorldProofTraceEntry(event, diagnostics, tracePhase),
+    ]);
+    reportWorldRuntimeDiagnostics(event, diagnostics, errorMessage, phaseOverride);
+  }, []);
+
+  const reportLoadedDiagnosticsIfNeeded = useCallback((diagnostics: WorldRuntimeDiagnostics) => {
+    if (reportedLoadedDiagnosticsRef.current) return;
+
+    reportedLoadedDiagnosticsRef.current = true;
+    recordWorldRuntimeDiagnostics("world_runtime_loaded", diagnostics);
+  }, [recordWorldRuntimeDiagnostics]);
+
+  const reportInitialDiagnosticsIfNeeded = useCallback((diagnostics: WorldRuntimeDiagnostics) => {
+    if (reportedInitialDiagnosticsRef.current) return;
+
+    reportedInitialDiagnosticsRef.current = true;
+    recordWorldRuntimeDiagnostics("world_runtime_initial", diagnostics);
+  }, [recordWorldRuntimeDiagnostics]);
+
+  const reportAccountDetectedDiagnosticsIfNeeded = useCallback((diagnostics: WorldRuntimeDiagnostics) => {
+    if (reportedAccountDetectedDiagnosticsRef.current || diagnostics.walletAddress !== "present") return;
+
+    reportedAccountDetectedDiagnosticsRef.current = true;
+    recordWorldRuntimeDiagnostics("world_account_context_detected", diagnostics);
+  }, [recordWorldRuntimeDiagnostics]);
+
+  const reportPendingDiagnosticsIfNeeded = useCallback((
+    diagnostics: WorldRuntimeDiagnostics,
+    phaseOverride?: Phase,
+  ) => {
+    if (diagnostics.walletAddress !== "missing") return;
+    if (!diagnostics.worldAppRuntime && !diagnostics.nativeTransport && !diagnostics.worldAppUserAgent) return;
+
+    const pendingKey = [
+      diagnostics.worldAppRuntime ? "runtime" : "no-runtime",
+      diagnostics.nativeTransport ? "transport" : "no-transport",
+      diagnostics.worldAppUserAgent ? "ua" : "no-ua",
+      diagnostics.worldAppInit.attempts,
+      diagnostics.worldAppInit.success,
+      diagnostics.worldAppInit.transport,
+      diagnostics.worldAppInit.stateContainer,
+      diagnostics.worldAppInit.errorCode,
+      diagnostics.worldAppKeys.join(","),
+      diagnostics.worldAppShapeKeys.join(","),
+      diagnostics.miniKitUserKeys.join(","),
+    ].join("|");
+    if (reportedPendingDiagnosticsKeysRef.current.includes(pendingKey)) return;
+
+    reportedPendingDiagnosticsKeysRef.current = [
+      ...reportedPendingDiagnosticsKeysRef.current.slice(-11),
+      pendingKey,
+    ];
+    recordWorldRuntimeDiagnostics("world_account_context_pending", diagnostics, undefined, phaseOverride);
+  }, [recordWorldRuntimeDiagnostics]);
+
+  const handleBlockedNavigation = useCallback((attempt: BlockedNavigationAttempt) => {
+    const message = blockedNavigationMessage(attempt);
+    if (lastBlockedNavigationMessageRef.current === message) return;
+
+    lastBlockedNavigationMessageRef.current = message;
+    const currentPhase = phaseRef.current;
+    const diagnostics = worldRuntimeDiagnosticsRef.current ?? getWorldRuntimeDiagnostics();
+    setWorldRuntimeDiagnostics(diagnostics);
+    setError("");
+    setNotice(BLOCKED_NAVIGATION_NOTICE);
+    recordWorldRuntimeDiagnostics("world_external_navigation_blocked", diagnostics, message, currentPhase);
+  }, [recordWorldRuntimeDiagnostics]);
+
   useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  useEffect(() => {
+    worldRuntimeDiagnosticsRef.current = worldRuntimeDiagnostics;
+  }, [worldRuntimeDiagnostics]);
+
+  useEffect(() => {
+    return installInAppNavigationGuard(window, {
+      allowNavigation: (url) => allowPostProofNavigationRef.current && isAllowedPostProofNavigation(url),
+      blockBeforeUnload: () => {
+        const currentPhase = phaseRef.current;
+        if (currentPhase !== "verifying_world" && currentPhase !== "creating_proof") return false;
+        if (allowPostProofNavigationRef.current) return false;
+
+        const diagnostics = worldRuntimeDiagnosticsRef.current ?? getWorldRuntimeDiagnostics();
+        return Boolean(diagnostics.worldAppRuntime || diagnostics.nativeTransport || diagnostics.worldAppUserAgent);
+      },
+      onBlockedNavigation: handleBlockedNavigation,
+    });
+  }, [handleBlockedNavigation]);
+
+  useEffect(() => {
+    const handleBlockedMiniKitCommand = () => {
+      const currentPhase = phaseRef.current;
+      const diagnostics = worldRuntimeDiagnosticsRef.current ?? getWorldRuntimeDiagnostics();
+      setWorldRuntimeDiagnostics(diagnostics);
+      setError("");
+      setNotice(BLOCKED_NAVIGATION_NOTICE);
+      recordWorldRuntimeDiagnostics(
+        "world_external_navigation_blocked",
+        diagnostics,
+        "minikit-command=blocked",
+        currentPhase,
+      );
+    };
+    const handleBlockedNativeCommand = () => {
+      const currentPhase = phaseRef.current;
+      const diagnostics = worldRuntimeDiagnosticsRef.current ?? getWorldRuntimeDiagnostics();
+      setWorldRuntimeDiagnostics(diagnostics);
+      setError("");
+      setNotice(BLOCKED_NAVIGATION_NOTICE);
+      recordWorldRuntimeDiagnostics(
+        "world_external_navigation_blocked",
+        diagnostics,
+        "native-command=blocked",
+        currentPhase,
+      );
+    };
+
+    window.addEventListener("veripost:minikit-command-blocked", handleBlockedMiniKitCommand);
+    window.addEventListener("veripost:native-command-blocked", handleBlockedNativeCommand);
+    return () => {
+      window.removeEventListener("veripost:minikit-command-blocked", handleBlockedMiniKitCommand);
+      window.removeEventListener("veripost:native-command-blocked", handleBlockedNativeCommand);
+    };
+  }, [recordWorldRuntimeDiagnostics]);
+
+  useEffect(() => {
+    for (const attempt of drainEarlyBlockedNavigationAttempts()) {
+      handleBlockedNavigation(attempt);
+    }
+  }, [handleBlockedNavigation]);
+
+  useEffect(() => {
+    const reportWorldRuntimeExit = (event: "world_runtime_pagehide" | "world_runtime_visibility_hidden") => {
+      const currentPhase = phaseRef.current;
+      const diagnostics = worldRuntimeDiagnosticsRef.current;
+      const worldAppSurface = Boolean(
+        diagnostics?.worldAppRuntime || diagnostics?.nativeTransport || diagnostics?.worldAppUserAgent,
+      );
+      if (!diagnostics || (!worldAppSurface && currentPhase !== "verifying_world" && currentPhase !== "creating_proof")) return;
+
+      recordWorldRuntimeDiagnostics(event, diagnostics, undefined, currentPhase);
+    };
+    const handlePageHide = () => reportWorldRuntimeExit("world_runtime_pagehide");
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        reportWorldRuntimeExit("world_runtime_visibility_hidden");
+      }
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [recordWorldRuntimeDiagnostics]);
+
+  useEffect(() => {
+    purgeLegacyBrowserAuthState();
+
     let mounted = true;
 
     async function loadConfig() {
       try {
-        const response = await fetch("/api/config", { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error(await readApiError(response));
+        const nextDebugWorldRuntime = new URLSearchParams(window.location.search).get("debug") === "world";
+        const legacyEntrypointRecovery = consumeLegacyEntrypointLocation();
+        primeWorldAppRuntime(BUILD_TIME_WORLD_APP_ID);
+        const initialDiagnostics = getWorldRuntimeDiagnostics();
+        setIsWorldApp(isInWorldApp());
+        setWorldAccountPresent(hasWorldAppAccount());
+        setDebugWorldRuntime(nextDebugWorldRuntime);
+        setWorldRuntimeDiagnostics(initialDiagnostics);
+        reportInitialDiagnosticsIfNeeded(initialDiagnostics);
+        if (legacyEntrypointRecovery) {
+          setNotice(legacyEntrypointRecovery === "miniapp" ? LEGACY_MINIAPP_SHELL_NOTICE : LEGACY_AUTH_BLOCKED_NOTICE);
+          recordWorldRuntimeDiagnostics(
+            "world_external_navigation_blocked",
+            initialDiagnostics,
+            legacyEntrypointRecovery === "miniapp"
+              ? LEGACY_MINIAPP_SHELL_DIAGNOSTIC_MESSAGE
+              : LEGACY_AUTH_BLOCKED_DIAGNOSTIC_MESSAGE,
+            "loading",
+          );
+        }
+        const configResponse = await fetch("/api/config", { cache: "no-store" });
+        if (!configResponse.ok) {
+          throw new Error(await readApiError(configResponse));
         }
 
-        const nextConfig = (await response.json()) as AppConfig;
+        const nextConfig = (await configResponse.json()) as AppConfig;
+        refreshWorldAppContext(nextConfig.appId);
         if (!mounted) return;
         setConfig(nextConfig);
+        setIsWorldApp(isInWorldApp());
+        setWorldAccountPresent(hasWorldAppAccount());
+        setWorldAccountOrbVerified(getWorldAccountOrbVerified());
+        const nextDiagnostics = getWorldRuntimeDiagnostics();
+        setWorldRuntimeDiagnostics(nextDiagnostics);
+        reportLoadedDiagnosticsIfNeeded(nextDiagnostics);
+        reportAccountDetectedDiagnosticsIfNeeded(nextDiagnostics);
+        reportPendingDiagnosticsIfNeeded(nextDiagnostics, "ready");
         setPhase("ready");
       } catch (loadError) {
         if (!mounted) return;
@@ -93,42 +765,88 @@ export default function ComposeFlow() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [
+    recordWorldRuntimeDiagnostics,
+    reportAccountDetectedDiagnosticsIfNeeded,
+    reportInitialDiagnosticsIfNeeded,
+    reportLoadedDiagnosticsIfNeeded,
+    reportPendingDiagnosticsIfNeeded,
+  ]);
 
   useEffect(() => {
     if (!proofResult) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(proofResult));
+    saveProofResult(proofResult);
   }, [proofResult]);
+
+  useEffect(() => {
+    const canNavigateToX = Boolean(proofResult && isSavedProofVisibleForDraft(proofResult, text));
+    allowPostProofNavigationRef.current = canNavigateToX;
+    (window as EarlyNavigationWindow).__veripostAllowPostProofNavigation = canNavigateToX;
+  }, [proofResult, text]);
+
+  useEffect(() => {
+    if (!config) return;
+
+    if (worldAccountPresent) {
+      return;
+    }
+
+    const refresh = () => {
+      refreshWorldAppContext(config.appId);
+
+      setIsWorldApp(isInWorldApp());
+      setWorldAccountPresent(hasWorldAppAccount());
+      setWorldAccountOrbVerified(getWorldAccountOrbVerified());
+      const nextDiagnostics = getWorldRuntimeDiagnostics();
+      setWorldRuntimeDiagnostics(nextDiagnostics);
+      reportLoadedDiagnosticsIfNeeded(nextDiagnostics);
+      reportAccountDetectedDiagnosticsIfNeeded(nextDiagnostics);
+      reportPendingDiagnosticsIfNeeded(nextDiagnostics, phaseRef.current);
+    };
+
+    refresh();
+    const intervalId = window.setInterval(refresh, WORLD_APP_CONTEXT_REFRESH_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [
+    config,
+    reportAccountDetectedDiagnosticsIfNeeded,
+    reportLoadedDiagnosticsIfNeeded,
+    reportPendingDiagnosticsIfNeeded,
+    worldAccountPresent,
+  ]);
 
   const validation = useMemo(() => validatePostText(text), [text]);
   const normalizedLength = validation.ok ? validation.normalized.length : text.trim().length;
   const charactersLeft = (config?.maxPostTextLength ?? 220) - normalizedLength;
-  const signedIn = status === "authenticated";
-  const username = normalizeXUsername(session?.user?.username);
-  const hasXUsername = Boolean(username);
-  const busy = phase === "signing_world" || phase === "creating_proof" || status === "loading";
+  const busy = phase === "verifying_world" || phase === "creating_proof";
+  const canShowLastProof = Boolean(isSavedProofVisibleForDraft(proofResult, text));
   const canPost = Boolean(
-    signedIn && hasXUsername && config?.hasWorldConfig && config?.hasProofStorageConfig && validation.ok && !busy,
+      config?.hasWorldConfig &&
+      config?.hasProofStorageConfig &&
+      validation.ok &&
+      phase !== "loading" &&
+      !busy,
   );
-  const canShowLastProof = Boolean(signedIn && isSavedProofVisibleForDraft(proofResult, username, text));
   const postButtonLabel =
-    phase === "signing_world" ? "Sign with World ID" : phase === "creating_proof" ? "Creating proof" : "Post";
-
-  const startXLogin = useCallback(() => {
-    if (!config?.hasXAuthConfig) return;
-    signIn("twitter");
-  }, [config?.hasXAuthConfig]);
+    phase === "verifying_world"
+      ? "Checking World"
+      : phase === "creating_proof"
+        ? "Creating proof"
+        : "Post";
+  const showWorldRuntimeDiagnostics = shouldShowWorldRuntimeDiagnostics(
+    worldRuntimeDiagnostics,
+    phase,
+    debugWorldRuntime,
+  );
 
   const startPost = useCallback(async () => {
-    if (!config || !signedIn) return;
+    if (!config) return;
+
     if (!config.hasProofStorageConfig) {
       setError("Proof storage is not configured.");
-      setPhase("error");
-      return;
-    }
-
-    if (!username) {
-      setError("X login did not include a username. Sign out and log in with X again.");
       setPhase("error");
       return;
     }
@@ -141,91 +859,110 @@ export default function ComposeFlow() {
     }
 
     setError("");
-    setNotice("");
-    setPhase("signing_world");
-    setPendingDraft(nextValidation.normalized);
-    setPendingSignal(nextValidation.signal);
+    setNotice("Preparing in-app World ID proof.");
+    setPhase("verifying_world");
 
     try {
-      const response = await fetch("/api/world/rp-signature", {
+      refreshWorldAppContext(config.appId);
+      const startedDiagnostics = getWorldRuntimeDiagnostics();
+      setWorldRuntimeDiagnostics(startedDiagnostics);
+      setIsWorldApp(isInWorldApp());
+      setWorldAccountPresent(hasWorldAppAccount());
+      setWorldAccountOrbVerified(getWorldAccountOrbVerified());
+      recordWorldRuntimeDiagnostics("world_account_check_started", startedDiagnostics);
+      reportPendingDiagnosticsIfNeeded(startedDiagnostics, "verifying_world");
+
+      if (hasWorldAppAccount()) {
+        const readyDiagnostics = getWorldRuntimeDiagnostics();
+        setWorldRuntimeDiagnostics(readyDiagnostics);
+        recordWorldRuntimeDiagnostics(
+          "world_account_context_detected",
+          readyDiagnostics,
+          undefined,
+          "verifying_world",
+        );
+      }
+
+      const rpContextResponse = await fetch("/api/world-proof/rp-context", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: config.action }),
+        credentials: "same-origin",
+        headers: {
+          "content-type": "application/json",
+          "x-veripost-runtime-session": WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID,
+          "x-veripost-world-app-flow": WORLD_MINIAPP_AUTH_FLOW,
+        },
+        body: JSON.stringify({
+          draftText: nextValidation.normalized,
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error(await readApiError(response));
+      if (!rpContextResponse.ok) {
+        throw new Error(await readApiError(rpContextResponse));
       }
 
-      const payload = (await response.json()) as { rp_context: RpContext };
-      setRpContext(payload.rp_context);
-      worldWidgetPendingRef.current = true;
-      setWidgetOpen(true);
+      recordWorldRuntimeDiagnostics("world_idkit_native_started", getWorldRuntimeDiagnostics());
+      const idkitResponse = await requestNativeWorldIdKitProof({
+        action: config.action,
+        appId: config.appId,
+        environment: config.environment,
+        rpContext: await readWorldIdKitRpContext(rpContextResponse),
+        signal: nextValidation.signal,
+      });
+
+      const worldProofPayload = {
+        flow: WORLD_MINIAPP_AUTH_FLOW,
+        body: {
+          draftText: nextValidation.normalized,
+          idkitResponse,
+        },
+      };
+
+      setPhase("creating_proof");
+      setNotice("");
+      recordWorldRuntimeDiagnostics("world_proof_request_started", getWorldRuntimeDiagnostics());
+
+      const proofResponse = await fetch("/api/proofs", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "content-type": "application/json",
+          "x-veripost-runtime-session": WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID,
+          "x-veripost-world-app-flow": worldProofPayload.flow,
+        },
+        body: JSON.stringify(worldProofPayload.body),
+      });
+
+      if (!proofResponse.ok) {
+        throw new Error(await readApiError(proofResponse));
+      }
+
+      const savedProof = (await proofResponse.json()) as SavedProofResult;
+      setProofResult(savedProof);
+      setNotice("Proof ready. Post to X when you are ready.");
+      setPhase("proof_ready");
+      recordWorldRuntimeDiagnostics("world_proof_ready", getWorldRuntimeDiagnostics(), undefined, "proof_ready");
     } catch (postError) {
-      worldWidgetPendingRef.current = false;
-      setError(postError instanceof Error ? postError.message : "World verification could not start.");
+      const nextError = worldAccountCheckErrorMessage(postError);
+      const nextDiagnostics = getWorldRuntimeDiagnostics();
+      const idkitErrorCode = getWorldIdKitClientErrorCode(postError);
+
+      setNotice("");
+      setWorldRuntimeDiagnostics(nextDiagnostics);
+      if (idkitErrorCode === "world_idkit_connector_blocked") {
+        recordWorldRuntimeDiagnostics("world_idkit_connector_blocked", nextDiagnostics, nextError, "error");
+      } else if (idkitErrorCode) {
+        recordWorldRuntimeDiagnostics("world_idkit_native_failed", nextDiagnostics, nextError, "error");
+      } else {
+        recordWorldRuntimeDiagnostics("world_runtime_error", nextDiagnostics, nextError);
+      }
+      setError(nextError);
       setPhase("error");
     }
-  }, [config, signedIn, text, username]);
+  }, [config, recordWorldRuntimeDiagnostics, reportPendingDiagnosticsIfNeeded, text]);
 
-  const handleVerify = useCallback(
-    async (result: IDKitResult) => {
-      try {
-        worldWidgetPendingRef.current = false;
-        setPhase("creating_proof");
-        setError("");
-
-        const response = await fetch("/api/proofs", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            draftText: pendingDraft,
-            idkitResponse: result,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(await readApiError(response));
-        }
-
-        const payload = (await response.json()) as SavedProofResult;
-        setProofResult(payload);
-        setNotice("Opening X with your proof.");
-        setPhase("proof_ready");
-        setWidgetOpen(false);
-        window.location.assign(payload.tweetIntentUrl);
-      } catch (verifyError) {
-        worldWidgetPendingRef.current = false;
-        setPhase("error");
-        setWidgetOpen(false);
-        setError(verifyError instanceof Error ? verifyError.message : "Proof could not be created.");
-      }
-    },
-    [pendingDraft],
-  );
-
-  const handleError = useCallback((code: IDKitErrorCodes) => {
-    worldWidgetPendingRef.current = false;
-    setPhase("error");
-    setWidgetOpen(false);
-    setError(code === "user_rejected" ? "World ID signing was cancelled." : `World ID signing failed: ${code}.`);
-  }, []);
-
-  const handleWidgetOpenChange = useCallback((open: boolean) => {
-    setWidgetOpen(open);
-
-    if (!open && worldWidgetPendingRef.current) {
-      worldWidgetPendingRef.current = false;
-      setPhase("ready");
-      setNotice("");
-      setError("World ID signing was cancelled.");
-    }
-  }, []);
-
-  const openLastPost = useCallback(() => {
-    if (!proofResult || !canShowLastProof) return;
-    window.location.assign(proofResult.tweetIntentUrl);
-  }, [canShowLastProof, proofResult]);
+  const handlePrimaryAction = useCallback(() => {
+    startPost();
+  }, [startPost]);
 
   return (
     <main className="safe-page">
@@ -241,28 +978,6 @@ export default function ComposeFlow() {
         </header>
 
         <section className="surface mt-6 p-4">
-          {signedIn ? (
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-black">{username ? `@${username}` : session.user?.name}</p>
-                <p className="text-xs text-[var(--muted)]">Signed in with X</p>
-              </div>
-              <button className="secondary-button min-h-10 px-3 text-sm" type="button" onClick={() => signOut()}>
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <button
-              className="primary-button"
-              type="button"
-              disabled={!config?.hasXAuthConfig || status === "loading"}
-              onClick={startXLogin}
-            >
-              {status === "loading" ? <Loader2 aria-hidden="true" className="animate-spin" size={18} /> : null}
-              Login with X
-            </button>
-          )}
-
           <div className="mt-5 flex items-center justify-between gap-3">
             <label className="text-sm font-black" htmlFor="post-text">
               Post
@@ -274,9 +989,9 @@ export default function ComposeFlow() {
           <textarea
             id="post-text"
             className="field mt-2 min-h-44 resize-none p-4 text-base leading-6"
-            placeholder={signedIn ? "What do you want to post?" : "Login with X to write a post."}
+            placeholder="What do you want to post?"
             value={text}
-            disabled={!signedIn || busy}
+            disabled={busy || phase === "loading"}
             onChange={(event) => {
               setText(event.target.value);
               if (phase === "error") {
@@ -287,20 +1002,36 @@ export default function ComposeFlow() {
             maxLength={(config?.maxPostTextLength ?? 220) + 80}
           />
 
-          {!validation.ok && signedIn ? <p className="mt-3 text-sm text-[var(--muted)]">{validation.message}</p> : null}
+          {!validation.ok && phase !== "loading" ? <p className="mt-3 text-sm text-[var(--muted)]">{validation.message}</p> : null}
         </section>
 
-        {!config?.hasXAuthConfig && phase !== "loading" ? (
+        {!isWorldApp && phase !== "loading" ? (
           <div className="status-line status-warn mt-4 flex gap-2" role="status">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
-            <span>X login needs `X_CLIENT_ID`, `X_CLIENT_SECRET`, and `NEXTAUTH_SECRET`.</span>
+            <span>
+              Open VeriPost from its World App mini app listing.
+            </span>
+          </div>
+        ) : null}
+
+        {isWorldApp && !worldAccountPresent && phase !== "loading" ? (
+          <div className="status-line status-warn mt-4 flex gap-2" role="status">
+            <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
+            <span>Waiting for World App proof runtime.</span>
+          </div>
+        ) : null}
+
+        {isWorldApp && worldAccountOrbVerified === false && phase !== "loading" ? (
+          <div className="status-line status-warn mt-4 flex gap-2" role="status">
+            <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
+            <span>World App reports this account is not verified. VeriPost will recheck before creating a proof.</span>
           </div>
         ) : null}
 
         {!config?.hasWorldConfig && phase !== "loading" ? (
           <div className="status-line status-warn mt-4 flex gap-2" role="status">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
-            <span>World ID signing needs Developer Portal credentials.</span>
+            <span>World ID proof check needs Mini App and RP configuration.</span>
           </div>
         ) : null}
 
@@ -308,13 +1039,6 @@ export default function ComposeFlow() {
           <div className="status-line status-warn mt-4 flex gap-2" role="status">
             <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
             <span>Proof storage needs a production Postgres URL.</span>
-          </div>
-        ) : null}
-
-        {signedIn && !hasXUsername ? (
-          <div className="status-line status-warn mt-4 flex gap-2" role="status">
-            <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
-            <span>X login needs a username. Sign out and log in again.</span>
           </div>
         ) : null}
 
@@ -332,6 +1056,19 @@ export default function ComposeFlow() {
           </div>
         ) : null}
 
+        {showWorldRuntimeDiagnostics ? (
+          <section className="surface mt-5 p-4">
+            <p className="text-sm font-black text-[var(--accent)]">World runtime diagnostics</p>
+            <pre className="mt-3 max-h-64 overflow-auto rounded-md border border-[var(--line)] bg-white/70 p-3 text-xs leading-5 text-[var(--muted)]">
+              {JSON.stringify(getWorldRuntimeDiagnosticsDisplay(worldRuntimeDiagnostics), null, 2)}
+            </pre>
+            <p className="mt-4 text-sm font-black text-[var(--accent)]">World proof trace</p>
+            <pre className="mt-3 max-h-64 overflow-auto rounded-md border border-[var(--line)] bg-white/70 p-3 text-xs leading-5 text-[var(--muted)]">
+              {JSON.stringify(worldProofTrace, null, 2)}
+            </pre>
+          </section>
+        ) : null}
+
         {proofResult && canShowLastProof ? (
           <section className="surface mt-5 p-4">
             <p className="text-sm font-black text-[var(--accent)]">Last proof is ready</p>
@@ -342,34 +1079,27 @@ export default function ComposeFlow() {
               <a className="secondary-button px-4 text-sm" href={proofResult.proofUrl}>
                 Proof
               </a>
-              <button className="secondary-button px-4 text-sm" type="button" onClick={openLastPost}>
+              <a className="secondary-button px-4 text-sm" href={proofResult.tweetIntentUrl}>
                 Post to X
-              </button>
+              </a>
             </div>
           </section>
         ) : null}
 
-        {config && rpContext && pendingSignal ? (
-          <IDKitRequestWidget
-            open={widgetOpen}
-            onOpenChange={handleWidgetOpenChange}
-            app_id={config.appId as `app_${string}`}
-            action={config.action}
-            rp_context={rpContext}
-            allow_legacy_proofs={false}
-            preset={proofOfHuman({ signal: pendingSignal })}
-            environment={config.environment}
-            handleVerify={handleVerify}
-            onSuccess={() => undefined}
-            onError={handleError}
-            language="en"
-          />
-        ) : null}
-
         <div className="fixed inset-x-0 bottom-0 border-t border-[var(--line)] bg-[rgba(247,245,239,0.94)] px-6 py-4 backdrop-blur">
           <div className="shell">
-            <button className="primary-button" type="button" disabled={!canPost} aria-busy={busy} onClick={startPost}>
-              {busy ? <Loader2 aria-hidden="true" className="animate-spin" size={18} /> : <Send aria-hidden="true" size={18} />}
+            <button
+              className="primary-button"
+              type="button"
+              disabled={!canPost}
+              aria-busy={busy}
+              onClick={handlePrimaryAction}
+            >
+              {busy ? (
+                <Loader2 aria-hidden="true" className="animate-spin" size={18} />
+              ) : (
+                <Send aria-hidden="true" size={18} />
+              )}
               {postButtonLabel}
             </button>
           </div>

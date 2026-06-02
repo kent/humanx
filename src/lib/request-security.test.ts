@@ -30,6 +30,62 @@ describe("request origin guards", () => {
     );
   });
 
+  it("accepts production World App native IDKit requests when mobile webview provenance headers are missing", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://veripost.io";
+
+    expect(() =>
+      assertSameOriginRequest(
+        new Request("https://veripost.io/api/proofs", {
+          method: "POST",
+          headers: {
+            "x-veripost-world-app-flow": "idkit-native",
+          },
+        }),
+        {
+          allowMissingProvenanceHeader: {
+            name: "x-veripost-world-app-flow",
+            value: "idkit-native",
+          },
+        },
+      ),
+    ).not.toThrow();
+  });
+
+  it("still rejects cross-site World App native IDKit requests", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://veripost.io";
+
+    expect(() =>
+      assertSameOriginRequest(
+        new Request("https://veripost.io/api/proofs", {
+          method: "POST",
+          headers: {
+            "sec-fetch-site": "cross-site",
+            "x-veripost-world-app-flow": "idkit-native",
+          },
+        }),
+        {
+          allowMissingProvenanceHeader: {
+            name: "x-veripost-world-app-flow",
+            value: "idkit-native",
+          },
+        },
+      ),
+    ).toThrow("origin is not accepted");
+  });
+
+  it("accepts production mobile-webview POST requests with same-origin fetch metadata", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://veripost.io";
+
+    expect(() =>
+      assertSameOriginRequest(
+        new Request("https://veripost.io/api/proofs", {
+          method: "POST",
+          headers: { "sec-fetch-site": "same-origin" },
+        }),
+      ),
+    ).not.toThrow();
+  });
+
   it("accepts same-origin referers when Origin is absent", () => {
     process.env.NEXT_PUBLIC_APP_URL = "https://veripost.io";
 

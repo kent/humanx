@@ -61,7 +61,7 @@ export default async function ProofPage({ params }: PageProps) {
           </div>
 
           {proof.xUsername ? (
-            <p className="mt-3 text-sm font-bold text-[var(--muted)]">Posted from X login @{proof.xUsername}</p>
+            <p className="mt-3 text-sm font-bold text-[var(--muted)]">X account @{proof.xUsername}</p>
           ) : null}
 
           <blockquote className="mt-5 whitespace-pre-wrap rounded-lg border border-[var(--line)] bg-white p-4 text-base leading-7">

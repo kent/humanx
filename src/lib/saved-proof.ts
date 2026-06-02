@@ -39,13 +39,9 @@ export function parseSavedProofResult(value: unknown, appOrigin: string): SavedP
 
 export function isSavedProofVisibleForDraft(
   proofResult: SavedProofResult | null,
-  xUsername: string | null | undefined,
   draftText: string,
 ): proofResult is SavedProofResult {
   if (!proofResult) return false;
-
-  const username = normalizeXUsername(xUsername);
-  if (!username || proofResult.proof.xUsername !== username) return false;
 
   const normalizedDraft = normalizePostText(draftText);
   return !normalizedDraft || normalizedDraft === proofResult.proof.draftText;

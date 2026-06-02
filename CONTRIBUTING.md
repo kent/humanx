@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve HumanX. This project is open source under the MIT License.
+Thanks for helping improve VeriPost. This project is open source under the MIT License.
 
 ## Development Setup
 
@@ -30,10 +30,10 @@ Fix World ID signal mismatch handling
 
 ## Product and Security Boundaries
 
-- Do not add flows that imply HumanX verifies X account ownership unless OAuth-backed account verification is implemented.
-- Do not expose full World ID nullifiers publicly.
-- Keep World signing keys server-only.
-- Preserve same-window navigation for X posting so the app remains compatible with the World App webview.
+- Do not add flows that imply VeriPost verifies X account ownership unless OAuth-backed account verification is implemented.
+- Do not expose full World ID nullifiers or wallet-derived verifier values publicly.
+- Keep World configuration and storage credentials out of client-only code unless they are explicitly public values.
+- Keep proof creation inside World App, fail closed instead of following IDKit connector URLs, avoid redirect-capable auth/proof prompts, and use explicit same-window navigation only when the user chooses to post to X.
 
 ## License
 

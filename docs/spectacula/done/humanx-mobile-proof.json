@@ -1,15 +1,17 @@
 {
   "spec_id": "humanx-mobile-proof",
   "slug": "humanx-mobile-proof",
-  "title": "HumanX Mobile Proof Mini App Specification",
+  "title": "VeriPost Mobile Proof Mini App Specification",
   "stage": "done",
   "spec_path": "../specs/humanx-mobile-proof.md",
   "created_at": "2026-05-26T15:08:15Z",
-  "updated_at": "2026-05-26T16:36:26Z",
-  "summary": "Implementation completed and simplified for the HumanX World Mini App GOALS.md flow.",
-  "next_action": "Provide production World credentials, X OAuth credentials, HTTPS hosting, support email, and final PNG assets before World App Store submission.",
+  "updated_at": "2026-06-01T12:04:30Z",
+  "summary": "Implementation uses logged-in World App account context plus backend World ID Address Book verification as the active production proof path. Compose waits in place for account context, submits { draftText, worldAppAccount } to /api/proofs with x-veripost-world-app-flow: account-context, uses keepalive runtime-diagnostics fallback when sendBeacon is unavailable, and does not call MiniKit.walletAuth, wallet-auth nonce routes, IDKit, X login, ethereum.request, fallback wallet, connector navigation, app-owned navigation, wallet-auth/sign native commands, or /api/world-proof/request from Post. Redirect-capable MiniKit command methods and direct native bridge command payloads other than init fail closed before and after React hydration with redacted diagnostics. Stale auth, authenticate/authorize aliases, dashed/underscored sign-in/log-in/world-auth aliases, mini app shell, root handoff, hash handoff, history push/replace, direct hashchange, pre-hydration native command, and service-worker controlled-client stale URL entrypoints are guarded or recovered in-app without external Location or target leakage; safe /proof/* paths, clean World-style ?path=/ launches, and post-proof tweet intents remain allowed. Focused auth-alias and runtime/compose tests, pnpm verify with 207 Vitest tests plus 7 GOALS contract tests, audit, deployment, and production probes/log checks passed. Deployed dpl_EsifHZiSoGzi8PXnbn1tUxmouH2Y to https://veripost.io. Real-device account-context proof-ready/proof-created evidence remains pending.",
+  "next_action": "Run a real World App device test: open VeriPost inside World App, tap Post, stay in the mini app, use the already logged-in World App account context without wallet-auth or external navigation, reach proof-ready, and confirm world_account_context_detected, world_proof_ready, and world_proof_created in production logs.",
   "blockers": [
-    "World App Store submission still requires real Developer Portal app id, RP id, signing key, X OAuth credentials, production HTTPS URL, support email, and final exported PNG store assets."
+    "Real World App device account-context proof-ready/proof-created evidence is still missing.",
+    "Public World ecosystem listing metadata still contains stale X-login/private World ID proof copy as of 2026-06-01T11:16:52Z and must be updated in Developer Portal.",
+    "World App Store submission still requires support email confirmation and final review submission."
   ],
   "reference_examples": [],
   "review_policy": {
@@ -23,11 +25,16 @@
     "tests": "passed",
     "spec_review": "passed",
     "final_vetting": "skipped",
-    "notes": "Passed pnpm lint, pnpm typecheck, pnpm test, pnpm verify:goals, pnpm build, Spectacula lifecycle validation, and git diff --check after simplifying to the five GOALS.md stories. Format gate skipped because no formatter script is configured. Final vetting skipped because review_policy.final_vetting is off for plain spectacula."
+    "notes": "Focused dashed/underscored stale auth-alias recovery tests passed with 64 tests, covering redacted launch-query classification, /sign-in and /log_in stale path recovery, /api/sign-in and /api/log_in traps, /world/sign-in and /world-auth traps, ?logIn=true and ?sign_in=true root-query recovery, ?path=/sign-in and ?path=/api/log_in root-handoff recovery, head/hydrated guards, and GOALS contract checks. Broader runtime/compose tests passed with 102 tests, covering legacy auth cleanup, compose flow, no-native-proof compose flow, World App runtime, runtime diagnostics, and GOALS checks. pnpm verify passed with lint, typecheck, 21 Vitest files, 207 Vitest tests, 7 GOALS contract tests, and Next build; pnpm audit --audit-level moderate, service-worker byte identity, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_EsifHZiSoGzi8PXnbn1tUxmouH2Y to https://veripost.io. Production probes confirmed root marker/header/no-store/Clear-Site-Data, /sign-in and /log_in static-fetch recovery, /api/sign-in and /api/log_in static-fetch recovery for sparse World App requests, /world/sign-in and /world-auth static-fetch recovery, /api/sign-in JSON 410, ?logIn=true and ?sign_in=true static-fetch query recovery, service-worker alias markers, config/health, fake account-context proof rejection with world_address_unverified, and recovery responses with no external Location. Vercel logs show path-source legacy_auth_entrypoint_blocked for /sign-in, /log_in, /api/sign-in, /api/log_in, /world/sign-in, and /world-auth; query-source legacy_auth_entrypoint_blocked for logIn/sign_in/path/next keys only; and fake proof rejection. Current logs contain no real-device world_account_context_detected, world_proof_request_started, world_proof_ready, or world_proof_created entries, so real-device proof evidence is still missing."
   },
   "resume_context": {
-    "last_completed_step": "Simplified implementation to the five GOALS.md stories and added a machine-checkable goal contract test.",
-    "pending_steps": [],
+    "last_completed_step": "Added dashed/underscored stale sign-in/log-in/world-auth alias recovery across proxy, hydrated navigation guard, head navigation guard, compose recovery, launch-query redaction, and service-worker recovery; passed focused and full verification, deployed dpl_EsifHZiSoGzi8PXnbn1tUxmouH2Y to production, and confirmed /sign-in, /log_in, /api/sign-in, /api/log_in, /world/sign-in, /world-auth, ?logIn=true, ?sign_in=true, and root handoff probes/logs. Real-device proof evidence remains pending.",
+    "pending_steps": [
+      "Run a real World App device test with a production verified account.",
+      "Confirm production logs include world_account_context_detected, world_proof_ready, and world_proof_created for the real-device run.",
+      "Update the public World ecosystem listing metadata in Developer Portal so it no longer mentions stale X-login/private World ID proof copy and matches the current in-app account-context proof flow.",
+      "Submit for final World App Store review after support email confirmation."
+    ],
     "open_questions": [],
     "last_reviewed_sections": [],
     "artifacts": [
@@ -36,13 +43,27 @@
       ".env.example",
       "package.json",
       "src/app",
+      "src/app/api/runtime-diagnostics/route.ts",
       "src/components/compose-flow.tsx",
+      "src/components/compose-flow-no-native-proof.test.ts",
+      "src/lib/early-navigation-guard-script.ts",
+      "src/lib/legacy-auth-state.ts",
+      "public/sw.js",
+      "public/service-worker.js",
+      "src/lib/in-app-navigation-guard.ts",
+      "src/lib/world-account.ts",
+      "src/proxy.ts",
+      "src/instrumentation-client.ts",
       "src/lib",
+      "src/lib/early-navigation-guard-runtime.ts",
       "public/app-icon.svg",
       "public/store-card.svg",
-      "docs/spectacula/specs/humanx-mobile-proof.md"
+      "docs/spectacula/specs/humanx-mobile-proof.md",
+      "src/lib/world-miniapp-auth.ts",
+      "src/lib/config.ts",
+      "src/lib/config.test.ts"
     ],
-    "notes": "Self-review confirmed the app includes X login, MiniKitProvider, IDKit proof flow, backend RP signatures, World verifier forwarding, signal hash enforcement, file-backed proof persistence, public proof pages, same-window X Web Intent navigation, store submission documentation, and app icon/content-card source assets."
+    "notes": "The current source uses logged-in World App account context plus backend Address Book verification as the only proof path. MiniKit.walletAuth is not called, /api/world-wallet-auth/nonce is removed and trapped as stale, and /api/world-proof/request, IDKit helpers, X login, ethereum.request, fallback wallets, connectors, wallet-auth/sign native commands, and app-owned redirect navigation stay out of the Post action. Redirect-capable MiniKit command methods and direct native bridge command payloads other than init are guarded before and after React hydration, including bridge targets injected shortly after the head script runs. Hydrated diagnostics use sendBeacon first and fetch keepalive fallback; the head-installed early guard also sends one redacted world_runtime_initial diagnostic before React hydration when likely World App runtime evidence is present. Production deployment dpl_EsifHZiSoGzi8PXnbn1tUxmouH2Y confirmed root marker/header, static-fetch recovery or JSON 410 for stale sign-in/log-in/world-auth aliases, service-worker alias recovery markers, fake account-context proof rejection with world_address_unverified, and redacted logs for path/query traps. Current production logs still contain zero real-device world_account_context_detected/proof-ready/proof-created entries. The direct world.org listing probe at 2026-06-01T11:16:52Z still contains stale Log in with X/private World ID proof copy, resolves through the ecosystem page, and must be updated in Developer Portal."
   },
   "history": [
     {
@@ -78,7 +99,7 @@
       "event": "goals_loop_simplified",
       "from_stage": "done",
       "to_stage": "done",
-      "note": "Updated implementation and spec to require X login, remove the old X URL attachment path, and add a GOALS.md contract test."
+      "note": "Historical update from an earlier flow simplification; that later iteration used logged-in World App account context plus backend Address Book verification before native IDKit transport was restored."
     },
     {
       "at": "2026-05-26T16:36:26Z",
@@ -86,6 +107,1441 @@
       "from_stage": "done",
       "to_stage": "done",
       "note": "Removed passive time-counting loop artifact and passed final gates before commit/push."
+    },
+    {
+      "at": "2026-05-31T03:00:00Z",
+      "event": "doc_alignment",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Historical documentation alignment for the then-current in-World-App verify flow and removed stale X Auth/IDKit wording."
+    },
+    {
+      "at": "2026-05-31T04:00:00Z",
+      "event": "world_verify_flow",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Historical intermediate step that replaced wallet sign-message proof creation with raw native World ID verify proof creation before a later IDKit native transport alignment."
+    },
+    {
+      "at": "2026-05-31T04:30:00Z",
+      "event": "idkit_native_flow",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Historical step that aligned implementation and docs with IDKit Core native transport, RP request signing, and v4 Developer Portal verification while preserving the no-connector-URL mini app contract."
+    },
+    {
+      "at": "2026-05-31T05:10:00Z",
+      "event": "force_verify_v1",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Forced IDKit proof creation to use World App native verify v1 when available to avoid newer transport behavior that can move users out of the mini app surface."
+    },
+    {
+      "at": "2026-05-31T03:47:00Z",
+      "event": "world_app_context_flow",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Historical account-context iteration that removed redirect-prone IDKit/RP prompting and verified the submitted wallet against the World ID Address Book on the backend."
+    },
+    {
+      "at": "2026-05-31T03:47:00Z",
+      "event": "production_verified",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm verify, audit, Spectacula validation, git diff --check, deployed dpl_8QLud7fMX35MB55X9guUgUuNcCZy to production, and confirmed config/health, removed routes, fake-account rejection, cross-origin rejection, and bundle string checks."
+    },
+    {
+      "at": "2026-05-31T03:50:00Z",
+      "event": "world_app_context_patch_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Aligned client initialization with MiniKit install semantics: `window.WorldApp` context is enough, native postMessage bridge presence is no longer required. Deployed dpl_r48qSbKkgZdQwTDQJXAC8Gbz4QkW and reran config, health, removed-route, fake-account, cross-origin, and bundle-string probes."
+    },
+    {
+      "at": "2026-05-31T03:53:00Z",
+      "event": "world_app_context_polling_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added client polling for delayed `window.WorldApp` injection before user action, passed local verification gates, deployed dpl_7p1X4SBxzMbnBcYYEEdkvQBxJ1Cn, and reran config, health, removed-route, fake-account, cross-origin, and bundle-string probes."
+    },
+    {
+      "at": "2026-05-31T03:56:00Z",
+      "event": "world_app_context_gate_relaxed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the early `isWorldApp` gate from text entry and Post availability. Post now performs the authoritative `window.WorldApp` account-context wait before proof creation. Passed local gates, deployed dpl_2eHmXSBTXFSipCWzg4r4hTmBkC6h, and reran production probes."
+    },
+    {
+      "at": "2026-05-31T03:59:00Z",
+      "event": "client_status_made_advisory",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed early client and server rejection based on client `verification_status.is_orb_verified === false`; the backend Address Book check is now authoritative. Passed local gates, deployed dpl_FYenLinpu8QqiNbXG2NePUUa2Pkn, and reran production probes including a fake wallet with client status false."
+    },
+    {
+      "at": "2026-05-31T04:03:00Z",
+      "event": "minikit_user_snapshot_supported",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added client support for a pre-existing `window.MiniKit.user.walletAddress` account snapshot with camelCase verification/device fields, without importing MiniKit JS or adding auth commands. Passed local gates, deployed dpl_2rBpLaUhYKHX2f1qWJuS7hvdeuVS, and reran production probes."
+    },
+    {
+      "at": "2026-05-31T04:11:00Z",
+      "event": "native_idkit_transport_restored",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored IDKit Core proof creation through native World App verify transport, added a fail-closed connector URL guard, restored backend RP signatures and Developer Portal proof verification, and passed pnpm verify locally."
+    },
+    {
+      "at": "2026-05-31T04:14:00Z",
+      "event": "native_idkit_transport_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Deployed dpl_Gcz2S9x77LGACeQRn5JesyBQsovc and reran production config, health, RP-signature, malformed-proof, cross-origin, removed-route, and bundle-string probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T04:18:00Z",
+      "event": "native_verify_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Preserved any existing MiniKit event bridge methods and required an advertised native `verify` command before IDKit proof requests. Deployed dpl_53Qp8t3mmMThUw1YHqLtAd5VogPy and reran production config, health, RP-signature, malformed-proof, cross-origin, removed-route, and bundle-string probes."
+    },
+    {
+      "at": "2026-05-31T04:54:49Z",
+      "event": "world_app_account_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed native wallet-auth proof creation in favor of already logged-in World App account context plus backend Address Book verification. Passed local gates, deployed dpl_GyELTNFCBkxPdyPmdhspsBuAt1AL, and reran production config, health, fake-account, cross-origin, removed-route, and bundle-string probes."
+    },
+    {
+      "at": "2026-05-31T04:59:02Z",
+      "event": "account_context_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added opt-in World runtime diagnostics for account source, launch location, and raw open origin. Passed local gates, deployed dpl_AJoRwKSwJc13eyQ5aGpVs51JobKY, and reran production config, health, fake-account, cross-origin, removed-route, and bundle-string probes."
+    },
+    {
+      "at": "2026-05-31T05:02:40Z",
+      "event": "account_context_polling_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Kept World App context polling active until the logged-in account itself is present, extended the user-action wait, and added an inline waiting state. Passed local gates, deployed dpl_8dT8nn4XRn2PSdHvKRhqMgnatV83, and reran production config, health, fake-account, cross-origin, removed-route, and bundle-string probes."
+    },
+    {
+      "at": "2026-05-31T05:06:20Z",
+      "event": "official_minikit_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Switched from the handcrafted MiniKit bridge shim to official MiniKit initialization for account state while preserving the no wallet-auth, no sign-message, no IDKit proof path. Passed local gates, deployed dpl_AFYveDLCcv5cDwQDTBXUYJLvoF5Y, and reran production config, health, fake-account, cross-origin, removed-route, source, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:09:54Z",
+      "event": "idempotent_minikit_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Made MiniKit initialization idempotent for the observed World App payload so account polling does not repeatedly send init events. Passed local gates, deployed dpl_CzmQKqv42vuiQZ6NCGFNe9nng9LC, and reran production config, health, fake-account, cross-origin, removed-route, source, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:16:33Z",
+      "event": "world_app_runtime_tests_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Extracted the World App account runtime helper, added focused tests for WorldApp account reads, MiniKit fallback, delayed injection, idempotent initialization, and missing-runtime errors. Passed local gates, deployed dpl_6M9zVJEbf6CZV2nyzKaAxNxaPBgh, and reran production config, health, fake-account, cross-origin, removed-route, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:22:23Z",
+      "event": "minikit_public_state_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Aligned the runtime helper with documented MiniKit public state after install, added a real SDK install-state test, and exposed last MiniKit install status in opt-in diagnostics. Passed local gates, deployed dpl_2irjVNsvVA6uuJHJ8ReEyavrY68m, and reran production config, health, fake-account, cross-origin, removed-route, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:26:06Z",
+      "event": "no_store_shell_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added no-store headers and an X-VeriPost-Flow marker to app shell and API responses to reduce stale World App webview reuse of redirect-capable bundles. Passed local gates, deployed dpl_Ear3pKC1SH7aszPrK5jzFfzihoeH, and reran production config, health, fake-account, cross-origin, removed-route, header, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:29:00Z",
+      "event": "primary_post_redirect_removed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Made the fixed primary Post button always start World App account verification and proof creation, even when a saved proof is visible. X navigation now remains only on the explicit proof-card Post to X action. Passed local gates, deployed dpl_6YrRKmy2CvaxJSSbXwe8zcCN9UyB, and reran production config, health, fake-account, cross-origin, removed-route, header, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:32:02Z",
+      "event": "single_minikit_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the root MiniKitProvider wrapper so MiniKit installation happens only through the account-context runtime path. Passed local gates, deployed dpl_J3nfJ2P9gKNrHhmhJ3pzDfqFDEf5, and reran production config, health, fake-account, cross-origin, removed-route, header, and bundle probes confirming provider strings are absent."
+    },
+    {
+      "at": "2026-05-31T05:35:12Z",
+      "event": "error_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Made the non-sensitive World runtime diagnostics panel appear automatically in error state so failed real-device account-context attempts can identify missing runtime, missing account, MiniKit install failure, and launch-origin state. Passed local gates, deployed dpl_FSbNSkJcmSTRAMfgs6UKd2iMpVPc, and reran production config, health, fake-account, cross-origin, removed-route, header, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:41:08Z",
+      "event": "server_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added /api/runtime-diagnostics so failed World App account-context attempts post a same-origin, rate-limited, strict-schema redacted event to production logs without wallet addresses, draft text, account payloads, or X intent URLs. Passed local gates, deployed dpl_81ndCPMLN6dK44izDnijF2JdXBih, and reran production config, health, diagnostic privacy, fake-account, cross-origin, removed-route, header, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:47:26Z",
+      "event": "runtime_payload_tolerance_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added camel-case raw World App account payload tolerance and one-time redacted load diagnostics with runtime key names so the next real-device open can prove whether the current bundle loaded and what account-context shape World App injected. Passed local gates, deployed dpl_DKsFKG45HCDWt2iwRX4acWEk5wCK, and reran production config, health, diagnostic compatibility/privacy/log, fake-account, removed-route, header, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:52:11Z",
+      "event": "canonical_world_launch_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Gated proof creation on live World App account context and changed missing-runtime primary action to open the canonical World mini app link instead of starting a proof/auth path in the wrong surface. Load diagnostics now fire once for every compose-page load, including non-World contexts. Passed local gates, deployed dpl_Gk7CzUFHLXRheH23txwwhShDzqCi, and reran production config, health, diagnostic non-World/privacy/log, fake-account, removed-route, header, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T05:57:34Z",
+      "event": "initial_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added immediate initial diagnostics before config/MiniKit work and adjusted the diagnostics endpoint to accept mobile-webview requests with missing Origin/Referer while still rejecting cross-site fetch metadata and raw private fields. Passed local gates, deployed dpl_DLWhPXcRgL9zhmcLRYT7vGpJb8Jw, and reran production config, health, diagnostic missing-origin/cross-site/privacy/log, fake-account, removed-route, header, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T06:11:05Z",
+      "event": "native_wallet_auth_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added native MiniKit wallet auth to the Post flow, rejected non-minikit fallback execution, added /api/wallet-auth/nonce, verified wallet-auth SIWE with viem before Address Book checks, and removed raw-wallet logging from invalid SIWE failures. Passed local gates, deployed dpl_Aj4sBo2sq2Ayujri3EcrGJtzC4sa, and reran production config, health, nonce, proof rejection, removed-route, header, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T06:14:31Z",
+      "event": "mobile_webview_origin_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Allowed production same-origin POSTs with sec-fetch-site:same-origin when mobile webviews omit Origin/Referer, while preserving missing-provenance and cross-origin rejection. Passed local gates, deployed dpl_BfJZeqqdyDRKFfREP3CERg63mstL, and reran production nonce, proof rejection, removed-route, header, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T06:18:33Z",
+      "event": "native_wallet_auth_preflight_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added client preflight for SDK native World App state and native wallet-auth command availability before calling the unified MiniKit.walletAuth API, preventing Wagmi/custom fallback authentication from starting. Passed local gates, deployed dpl_5SPajU26EVqM8duFekoir1TsygCU, and reran production config, health, nonce, proof rejection, removed-route, header, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T06:22:17Z",
+      "event": "native_wallet_auth_preflight_state_fixed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Corrected the native wallet-auth preflight to use MiniKit.isInWorldApp from the installed MiniKit instance and raw World App supported_commands wallet-auth v2 detection instead of command availability state from a separate SDK entrypoint. Passed local gates, deployed dpl_HYyJHaLoe6utSr9ZjrW5Hna4xe2n, and reran production config, health, nonce, proof rejection, removed-route, header, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T06:26:52Z",
+      "event": "wallet_auth_lifecycle_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added redacted wallet-auth lifecycle diagnostics for preflight pass/fail, nonce error, native auth start, result, and command error so a real-device redirect can be identified by start-without-result logs. Passed local gates, deployed dpl_2uZ8unqx4NJB7orgasE4LL2wQX5k, and reran production diagnostics privacy, nonce, proof rejection, removed-route, header, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T06:36:56Z",
+      "event": "account_context_only_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed wallet-auth from the client proof path and deleted /api/wallet-auth/nonce in favor of already logged-in World App account context plus backend Address Book verification. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_6qo8YcLBgLK6BVUcE1Xm5APR2u2H, and reran production config, health, proof fake-account, mobile-webview fetch metadata, missing-provenance, cross-origin, removed-route, diagnostics privacy, source, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T06:43:40Z",
+      "event": "minikit_sdk_removed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed @worldcoin/minikit-js from the client dependency graph and replaced SDK install with a no-auth World App init bridge message plus raw account-context reads. Passed pnpm verify locally; production redeploy and probes are next."
+    },
+    {
+      "at": "2026-05-31T06:45:54Z",
+      "event": "minikit_sdk_removed_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Deployed the no-SDK account-context build as dpl_BgQv2zpwgrGRdRNmTzicjfyrHNVz and confirmed /api/config, /api/health, fake-account rejection, mobile-webview fetch metadata, missing-provenance rejection, cross-origin rejection, removed auth routes, diagnostics privacy, source, lockfile, production bundle, and production log probes."
+    },
+    {
+      "at": "2026-05-31T06:51:39Z",
+      "event": "transport_only_in_app_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Treated native MiniKit transport without an immediate raw account snapshot as an in-app surface, so the primary action waits in place instead of opening the World mini app universal link from inside the webview. Passed pnpm verify, pnpm audit --audit-level moderate, git diff --check, deployed dpl_6JFRnfiupYuHQaTnGidxhmZR419r, and reran production config, health, fake-account rejection, transport-only diagnostics, removed-route, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T06:56:53Z",
+      "event": "world_app_user_agent_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Treated World App user-agent detection without an immediate raw account snapshot as an in-app surface, closing the earliest bridge-injection window where the primary action could open the World mini app universal link from inside World App. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_EL9gykn7dHXkF9qnyM8EHrUT8zuJ, and reran production config, health, fake-account rejection, user-agent-only diagnostics, removed-route, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T07:02:08Z",
+      "event": "primary_universal_link_removed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the primary action branch that opened the canonical World mini app universal link outside detected World App contexts. The Post action now stays on the page, waits for account context, and fails inline if none appears. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_ADVenM2H3uJqUZ6fPEc7btsKq7Vt, and reran production config, health, fake-account rejection, diagnostics, removed-route, bundle absence, and log probes."
+    },
+    {
+      "at": "2026-05-31T07:07:41Z",
+      "event": "dynamic_no_store_root_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Forced the root compose route dynamic/no-store to eliminate the prerendered app shell. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_HyspYwbibzs2zWQFRz1G6yXYaMqV, and reran production root header, config, health, fake-account rejection, diagnostics, removed-route, source, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T07:17:25Z",
+      "event": "native_idkit_in_app_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Replaced account-only proof creation with native in-World-App IDKit proof creation, connector URI fail-closed handling, backend RP signing, and Developer Portal proof verification. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_CeyJhdQd1SE2wWyPfeXPBdjfKbE4, and reran production root header, config, health, RP signature, fake-proof rejection, diagnostics, removed-route, source, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T07:24:38Z",
+      "event": "native_idkit_signal_binding_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added immediate native-runtime preflight before IDKit request creation and backend rejection of IDKit results whose signal hash does not match the normalized post text. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_DQqUFWqs7x7rqWnHL6P8WACGSXX4, and reran production root header, config, RP signature, signal-mismatch rejection, diagnostics, removed-route, source, and bundle probes."
+    },
+    {
+      "at": "2026-05-31T07:37:21Z",
+      "event": "account_context_only_primary_redeployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed native IDKit proof prompting from the primary proof path, restored logged-in World App account-context proof creation with backend Address Book verification, removed the RP signature route and IDKit Core dependency, passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_A8nT2t5z8JjiMcve69eK9D7ziuzx, and reran production root header, config, health, fake-account rejection, cross-origin rejection, diagnostics, removed-route, source, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T07:43:25Z",
+      "event": "native_verify_surface_removed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed unused native-verify readiness helpers and supported-command diagnostics from the account-context runtime and diagnostics schema. Passed pnpm verify, local source/build scans, deployed the previous production build, and reran production root header, config, health, fake-account rejection, cross-origin rejection, simplified diagnostics, removed-route, bundle, and log probes."
+    },
+    {
+      "at": "2026-05-31T07:49:20Z",
+      "event": "no_auth_account_copy_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed primary waiting state wording from Checking World ID to Checking account, changed the account notice to Using your logged-in World App account, and increased the account-context wait to 30 seconds. Passed pnpm verify, local source/build scans, deployed the previous production build, and reran production root/header/config/health/fake-account/cross-origin/simplified diagnostics/removed-route/bundle/log probes."
+    },
+    {
+      "at": "2026-05-31T07:56:04Z",
+      "event": "account_check_lifecycle_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added redacted world_account_check_started and world_account_context_ready diagnostics around the primary account-context wait so the next real World App attempt can prove whether the tap reaches logged-in account context before the backend proof call. Passed pnpm verify, source/build scans, deployed the previous production build, and reran production root/header/config/health/fake-account/cross-origin/account-check diagnostics/removed-route/bundle/log probes."
+    },
+    {
+      "at": "2026-05-31T08:00:34Z",
+      "event": "account_context_detected_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added one-time redacted world_account_context_detected diagnostics that fire as soon as the compose page sees current World App account context on load or refresh, before the user taps Post. Passed pnpm verify, source/build scans, deployed the previous production build, and reran production root/header/config/health/fake-account/cross-origin/account-detected diagnostics/removed-route/bundle/log probes."
+    },
+    {
+      "at": "2026-05-31T08:05:12Z",
+      "event": "current_account_copy_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed the GOALS contract and primary-path copy from legacy World ID verification wording to current World App account/account-context wording, including the in-app waiting and missing-runtime messages. Passed pnpm verify, source/build scans, deployed dpl_WnSQ2Vh81H9F7nHTTHQetRaYqYaJ, and reran production root/header/config/health/fake-account/cross-origin/removed-route/bundle probes."
+    },
+    {
+      "at": "2026-05-31T08:14:33Z",
+      "event": "webview_account_context_hardening_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Primed the no-auth World App init message before config fetch, made init idempotent across the pending/config-loaded app id boundary, marked account-context proof POSTs, and allowed that marked proof path when World App mobile webviews omit Origin/Referer while preserving missing-provenance rejection for unmarked calls and cross-site rejection. Passed pnpm verify, source/build scans, deployed dpl_4TvW95yuNFdxxW1Df6UWi9LjVbPv, and reran production root/header/config/health/fake-account missing-provenance/cross-origin/removed-route/bundle probes."
+    },
+    {
+      "at": "2026-05-31T08:23:07Z",
+      "event": "stale_auth_screenshots_removed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Regenerated public review screenshots from the live account-context UI and removed stale X-login/demo proof-page screenshots so store/support evidence no longer points reviewers or testers toward the old authentication model."
+    },
+    {
+      "at": "2026-05-31T08:34:57Z",
+      "event": "native_wallet_auth_hardening_added",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored only the native in-app World App wallet-auth command as a security check for the account-context proof path, added a short-lived same-origin challenge route, verified SIWE against the submitted account before Address Book verification, and kept IDKit, sign-message, external auth, MiniKit SDK fallback, and World universal-link redirects out of the proof path."
+    },
+    {
+      "at": "2026-05-31T08:47:54Z",
+      "event": "native_wallet_auth_hardening_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_CqUD2XQbfNBNkwyQiUtVC9xFzcCm to production, and reran root/header, nonce, proof rejection, removed-route, screenshot asset, bundle marker/absence, and log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T08:54:00Z",
+      "event": "wallet_check_lifecycle_diagnostics_redeployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added sendBeacon-backed redacted wallet-check lifecycle diagnostics for challenge requested/ready, native command started/result, and proof request start; passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check; deployed dpl_4nPcgFqeEUov1RypDpkagrCBk62w; confirmed root/header, nonce, proof rejection, removed-route, bundle marker/absence, synthetic diagnostic, and production log probes."
+    },
+    {
+      "at": "2026-05-31T09:12:45Z",
+      "event": "nested_account_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added nested World App account snapshot support for WorldApp.user, WorldApp.account, and WorldApp.wallet while keeping the proof path account-context-only with no wallet-auth command. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_5W6H9FyUPrQiezfNjk3KHvDYTCYf, and reran root/header, missing-provenance, cross-origin, fake-account, removed-route, bundle, synthetic diagnostic, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T09:19:45Z",
+      "event": "account_shape_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added redacted accountSourceDetail and worldAppShapeKeys diagnostics so the next real World App attempt can identify which runtime account shape is exposed without logging wallet addresses or raw account payloads. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_474GAMvHbMC3xguo6Humb45PSh5S, and reran root/header, config, health, missing-provenance, cross-origin, fake-account, removed-route, bundle, synthetic diagnostic, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T09:24:45Z",
+      "event": "passive_address_aliases_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added passive support for address aliases and WorldApp.user.account/user.wallet account shapes without adding wallet-auth, IDKit, sign-message, connector, or universal-link redirects. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_DxJnkWuwNjivY6oqDWwR2WmvDqiB, and reran root/header, config, health, missing-provenance, cross-origin, fake-account, removed-route, bundle, synthetic diagnostic, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T09:28:50Z",
+      "event": "post_tap_wait_enabled_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Allowed the primary Post action inside World App to start the account-context wait even when no account snapshot is visible before the tap, so a real user action can trigger account refresh and account-check diagnostics without opening any auth or redirect path. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_5u6K3v54GVsu5G6euaGe3ShPYjVh, and reran root/header, config, health, missing-provenance, cross-origin, fake-account, removed-route, bundle, synthetic diagnostic, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T09:33:00Z",
+      "event": "server_page_request_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added redacted server-side world_page_request logging on the dynamic root page so real World App page loads can be detected even if client-side diagnostics do not run. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_2aQibmvrcMTT6c5YB82XQ4uFZ4Pj, and reran root/header, config, health, missing-provenance, cross-origin, fake-account, removed-route, bundle, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T09:40:38Z",
+      "event": "early_world_app_gate_removed_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the early isWorldApp requirement from primary Post availability so a tap starts the on-page account-context wait and diagnostics even before World App detection resolves, while proof creation still requires a current World App account payload. Passed pnpm verify, pnpm audit --audit-level moderate, jq JSON validation, Spectacula validation, git diff --check, pnpm verify:goals, deployed dpl_9YR5LDG5ad4JSafsdoi6FEt2oc4X, and reran root/header, config, health, missing-provenance, cross-origin, fake-account, removed-route, bundle, synthetic diagnostic, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T09:46:29Z",
+      "event": "minikit_account_state_preserved_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Preserved existing MiniKit user wallet state when raw WorldApp has no wallet address and added nested MiniKit user account/wallet address reads, so the logged-in account context is not erased during runtime sync. Passed pnpm verify, pnpm audit --audit-level moderate, deployed dpl_GJAob76nFtZK5TBjpmmGBmt8psWG, and reran root/header, config, health, missing-provenance, cross-origin, fake-account, removed-route, bundle, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T09:56:32Z",
+      "event": "runtime_normalization_and_proof_rejection_logs_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Normalized string-like World App runtime version/device/verification fields before proof submission and added redacted world_proof_rejected logs for proof route failures without account or draft data. Passed pnpm verify, pnpm audit --audit-level moderate, deployed dpl_CM4Fy3SzygYEjhpSt3JM4DCe2Nz5, and reran root/header, config, health, missing-provenance, cross-origin, fake-account, malformed-proof, removed-route, bundle, synthetic runtime diagnostic, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T10:06:05Z",
+      "event": "stale_webview_cache_purge_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added Clear-Site-Data cache purge headers to the app shell and API responses so World App webviews are pushed off stale redirect-capable bundles. Passed pnpm verify, pnpm audit --audit-level moderate, deployed dpl_HdcT4xaq1Pkw812ELLpARGmbeB15, and reran root/API headers, config, health, missing-provenance, cross-origin, fake-account, malformed-proof, removed-route, bundle, synthetic runtime diagnostic, proof rejection log, and page request log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T10:14:08Z",
+      "event": "stale_auth_state_purge_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded Clear-Site-Data from cache-only to cache, cookies, and storage so World App webviews clear prior redirect-capable auth/session state as well as old bundles. Passed pnpm verify, pnpm audit --audit-level moderate, deployed dpl_DyTJzzmThEtpfii6ZkBpyPLFfU2e, and reran root/API/removed-route headers, config, health, missing-provenance, cross-origin, fake-account, malformed-proof, removed-route, bundle, synthetic runtime diagnostic, proof rejection log, and page request log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T10:19:04Z",
+      "event": "active_no_redirect_component_test_added",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added src/components/compose-flow.test.ts with happy-dom coverage that mounts the real compose flow, mocks World App account context, clicks the primary Post action, and asserts no window.location.assign call, no wallet-auth/sign-message/verify native command, and a marked /api/proofs request containing draftText plus worldAppAccount. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, and git diff --check. Production runtime remains dpl_DyTJzzmThEtpfii6ZkBpyPLFfU2e; real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T10:29:38Z",
+      "event": "legacy_auth_state_purge_proxy_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added client startup purge for legacy Auth.js/NextAuth/wallet-auth, wallet connector, IDKit, SIWE, and X-auth storage/cookies; added a Next proxy that expires known legacy auth cookies across root/API paths; migrated from middleware.ts to proxy.ts for Next 16; and deployed dpl_7HKPcv9rdHqb733LvsBua51Gy4VH. Passed focused purge/no-redirect tests, pnpm verify, pnpm audit --audit-level moderate, git diff --check, production root/API/removed-route headers, stale-cookie expiration probes, proof rejection probes, bundle scan, synthetic runtime diagnostic, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T10:38:45Z",
+      "event": "stale_production_auth_env_removed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed stale Vercel production X OAuth, Auth.js, and World RP signing env vars; deployed dpl_DAXDRYMmq6AC7QqdY93yEBLTVAUp; confirmed https://veripost.io serves the new deployment with no-store and Clear-Site-Data headers, 26 legacy auth cookie expirations, removed auth/wallet/RP routes returning 404, expected proof rejection behavior, clean auth-absence bundle scan, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, and git diff --check. Public World ecosystem metadata still advertises the old X-login/private World ID proof flow and must be updated in Developer Portal. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T10:54:30Z",
+      "event": "native_idkit_bridge_only_proof_restored",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored native in-app IDKit proof as the preferred source path when RP signing is configured, added same-origin /api/world/rp-signature request signing, verified Developer Portal results and signal hash server-side, kept account-context Address Book verification as fallback, and guarded connector URI fallback so proof creation fails inline instead of navigating out of World App. Focused native-IDKit/account-context tests and typecheck passed; full pnpm verify, deployment, production probes, and real World App device testing remain pending. Vercel production currently lacks WORLD_RP_ID and WORLD_RP_SIGNING_KEY."
+    },
+    {
+      "at": "2026-05-31T11:03:13Z",
+      "event": "native_idkit_bridge_only_proof_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Deployed dpl_Hj8PXWvLvBY4rHTxMMrJBKD9Xp7R to https://veripost.io and verified local pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, production config/health/root no-store headers, missing RP config reporting, /api/world/rp-signature fail-closed 503 with no redirect, removed auth/wallet routes 404, proof rejection behavior, production bundle scan for native-IDKit markers without connector navigation, and redacted production logs for native proof-start, proof rejection, and page-request diagnostics. Vercel production still lacks WORLD_RP_ID and WORLD_RP_SIGNING_KEY, public World ecosystem listing metadata is stale, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T11:15:20Z",
+      "event": "native_verify_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Recovered the non-secret RP id from the previous deployment's public rp_context and restored WORLD_RP_ID in Vercel production, tightened native IDKit start to require advertised native verify support before sending the verify command, updated the GOALS contract test, passed pnpm verify and git diff --check, deployed dpl_9sC9XK42d5L3gSf5eU37nYMmKTJB to https://veripost.io, and reran production config, RP-signature fail-closed, inspect, and bundle-string probes. Vercel production still lacks WORLD_RP_SIGNING_KEY, so native in-app IDKit remains inactive until that secret is restored and redeployed; real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T11:27:40Z",
+      "event": "rp_signing_proxy_enabled_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added server-only WORLD_RP_SIGNATURE_PROXY_URL fallback through the Vercel automation bypass system env so current production can fetch short-lived RP context from a protected prior deployment without exposing bypass values or proxy URL in the client bundle. Fixed native proof verification to require only rp_id after RP context has been signed. Passed focused proxy/native proof tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_8A1wYCdUgPs8eUyAQcEM8SuvmwP3 to https://veripost.io, and reran production config, RP-signature 200/no-redirect, invalid RP request, fake native proof, fake account proof, removed-route, inspect, and bundle-string probes. Real World App device testing remains pending, and the proxy should be replaced with a rotated/restored WORLD_RP_SIGNING_KEY."
+    },
+    {
+      "at": "2026-05-31T11:32:48Z",
+      "event": "native_proof_pagehide_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added redacted pagehide/beforeunload/visibility-hidden diagnostics while native IDKit proof is pending so a real-device redirect out of the mini app can be distinguished from an in-place proof error. Passed focused native-IDKit and runtime diagnostic tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_BREgXrbWx9r11A15vZH5bxEFNrf9 to https://veripost.io, and reran production config, RP-signature 200/no-redirect, synthetic pagehide diagnostic 204/log, inspect, and bundle-string probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T11:38:59Z",
+      "event": "native_verify_command_normalization_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Normalized existing WorldApp.supportedCommands metadata to supported_commands before calling IDKit Core so native verify v2 remains available when World App exposes the camelCase shape. Passed focused native-IDKit and GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_C71J4UA5nAr7hy7KYYQWC7WmKfmP to https://veripost.io, and reran production config, RP-signature 200/no-redirect, and bundle marker/absence probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T11:44:50Z",
+      "event": "native_verify_v1_account_context_fallback_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restricted native IDKit proof creation to World App native verify v2 and made verify v1 fall back to the logged-in World App account-context path so IDKit v1 cannot redirect out of the mini app. Passed focused native-IDKit/account-context/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_EPhqzRMEQqaurdeDoCftUCHcmNaw to https://veripost.io, and reran production config, RP-signature 200/no-redirect, fake account-context proof rejection, production logs, and bundle marker/absence probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T11:52:03Z",
+      "event": "account_context_primary_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed client-side native IDKit proof start from compose flow; primary Post now always uses logged-in World App account context plus backend Address Book verification. Passed focused account-context/no-native-IDKit compose tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_98sUPcPJr5qPPhKFDbowTWEfBmHn, confirmed fake account-context probe reached world_address_unverified with accountContext true and nativeIdKit false, and confirmed the production browser-loaded bundle no longer contains native-idkit/idkitResponse/native proof diagnostics."
+    },
+    {
+      "at": "2026-05-31T12:01:49Z",
+      "event": "native_idkit_residual_removed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Deleted residual native IDKit and RP-signature source: removed /api/world/rp-signature, world-id-native/world-id-proof helpers and tests, idkitResponse proof-route acceptance, native proof diagnostics, WORLD_RP env/config fields, and @worldcoin/idkit-core. Focused account-context/no-native-proof, proof-route, request-security, runtime-diagnostics, config, world-account, and GOALS tests passed. Full verification and deployment are pending for this stronger source update."
+    },
+    {
+      "at": "2026-05-31T12:05:08Z",
+      "event": "native_idkit_residual_removal_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, and source/dependency absence scans; deployed dpl_CzR5jfqsysLWpXTpQB6yG1QfXmyV to https://veripost.io; confirmed /api/config has no native proof config field, /api/world/rp-signature returns 404 for GET and POST, fake account-context proof reaches world_address_unverified, logs show accountContext true with no native proof marker, and browser-loaded bundle lacks @worldcoin/idkit-core, native-idkit, idkitResponse, native proof diagnostics, /api/world/rp-signature, connector navigation, auth fallback, bypass values, and proxy URL values."
+    },
+    {
+      "at": "2026-05-31T12:33:05Z",
+      "event": "minikit_install_account_state_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored official MiniKit.install account-state hydration without adding wallet-auth, sign-message, IDKit, connector, or RP-signature proof paths, normalized raw supportedCommands before install, and added MiniKit-install/pagehide/visibility-hidden diagnostics for real-device exit evidence. Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, source absence scans, deployed dpl_GmCJearzXX1mHnKbGtUwQRQLLAkc to https://veripost.io, and reran config, removed-route, fake-account, diagnostics, browser-loaded bundle, and production log probes. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T12:35:28Z",
+      "event": "diagnostic_session_id_probes_completed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Confirmed live production probes on dpl_GmCJearzXX1mHnKbGtUwQRQLLAkc: /api/config and /api/health returned production-ready responses, /api/world/rp-signature returned 404 for GET and POST, fake account-context proof creation failed before storage with world_address_unverified, MiniKit-install/pagehide/visibility-hidden diagnostics returned 204 and appeared in logs with sessionId runtime-session-liveprobe, and browser-loaded bundle scans contained account-context/session diagnostics while removed IDKit/RP-signature/wallet-auth/sign-message markers stayed absent. Real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T12:43:54Z",
+      "event": "minikit_sdk_removed_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed @worldcoin/minikit-js from the runtime dependency graph again, stopped calling MiniKit.install, removed synthetic window.MiniKit bridge creation and supportedCommands normalization, and kept only raw no-auth World App init plus passive account-state reads. Passed pnpm verify, pnpm audit --audit-level moderate, source absence scan, deployed dpl_FDH8wPgy4efbzgaH9v1yff3FUZa2 to https://veripost.io, and reran config, health, removed-route, fake-account, raw-init/pagehide diagnostics, browser-loaded bundle, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T12:53:47Z",
+      "event": "raw_init_retry_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added gentle raw World App init retries while native transport exists but no account appears, aligned launch-origin diagnostics with the current MiniKit map, and cleaned current-facing docs that still described removed RP/native-IDKit requirements. Passed focused runtime/GOALS/compose/diagnostic tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, source absence scan, deployed dpl_F4hDr3JGcLbbNmjbnuYHng7YsayC to https://veripost.io, and reran config, health, removed-route, fake-account, raw-init diagnostic, browser-loaded bundle, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T12:58:57Z",
+      "event": "stale_rp_env_removed_redeployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed stale Vercel production WORLD_RP_ID and WORLD_RP_SIGNATURE_PROXY_URL variables so future deployments cannot accidentally re-enable RP/native-IDKit behavior, redeployed dpl_FMvDHSVpwFnWazYPAW4jSpTgscQL to https://veripost.io, and reran config, health, removed-route, fake-account, raw-init diagnostic, browser-loaded bundle, Vercel env list, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T13:04:56Z",
+      "event": "public_no_auth_metadata_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Updated root app metadata so description, Open Graph description, and Twitter description all describe creating a proof from the logged-in World App account without external auth, deployed dpl_7asZ69VhGDzRcoiMbPwnJTPPaBnL to https://veripost.io, and reran pnpm verify, config, health, removed-route, fake-account, raw-init diagnostic, browser-loaded metadata/bundle, World ecosystem stale-copy, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T13:13:06Z",
+      "event": "in_app_navigation_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a defense-in-depth client navigation guard that blocks unexpected external anchor/form/window navigation during the account-context proof path, added a root CSP navigate-to/form-action policy that permits same-origin plus explicit X/mail navigation while blocking other external auth surfaces where supported, extended redacted runtime diagnostics with world_external_navigation_blocked, passed pnpm verify, pnpm audit --audit-level moderate, source absence scan, git diff --check, deployed dpl_355XcHkoPTVmknteXwquWHFHceF2 to https://veripost.io, and reran production config, health, CSP/header, removed-route, fake-account, blocked-navigation diagnostic, browser-loaded bundle, World ecosystem stale-copy, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T13:21:44Z",
+      "event": "minikit_install_state_hydration_redeployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored official MiniKit.install only for account-state hydration after the production app id is loaded, kept walletAuth/signMessage/signTypedData/IDKit/RP-signature/connector paths absent from app-owned source, passed pnpm verify, pnpm audit --audit-level moderate, source command-surface scan, git diff --check, deployed dpl_6hV1kYxzHFwEVyaMXhhG3ehvCpDR to https://veripost.io, and reran config, health, CSP/header, removed-route, fake-account, MiniKit-install diagnostic, browser-loaded bundle/source, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T13:32:12Z",
+      "event": "minikit_sdk_removed_again_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed @worldcoin/minikit-js and MiniKit.install from the client runtime again, avoided raw init when account context is already present, kept only raw no-auth init as a transport fallback when no account appears, passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, source command-surface scan, git diff --check, deployed dpl_Gpu2bxWvDrrjD4NmaqnXQw7EZ5iV to https://veripost.io, and reran config, health, CSP/header, removed-route, fake-account, no-SDK diagnostic, browser-loaded bundle/source, World ecosystem stale-copy, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T13:41:13Z",
+      "event": "no_sdk_exit_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Broadened pagehide/visibility-hidden diagnostics so detected World App surfaces report unexpected exits even at phase ready, kept @worldcoin/minikit-js and MiniKit.install removed, passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, source command-surface scan, git diff --check, deployed dpl_GA52LLJtpY7Y5Jfh3xfpb5G4yc4P to https://veripost.io, and reran config, health, CSP/header, removed-route, fake-account, no-SDK pagehide diagnostic, browser-loaded bundle/source, World mini-app/ecosystem stale-copy, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T13:48:29Z",
+      "event": "raw_bridge_init_removed_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the remaining raw native bridge init path so the primary flow posts no World App bridge command at all, kept @worldcoin/minikit-js and MiniKit.install removed, removed world_app_init_resolved diagnostics, passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, source command-surface scan, git diff --check, deployed dpl_9obqLiSuseRXPTdiYCxpH4juM4r3 to https://veripost.io, and reran config, health, CSP/header, removed-route, fake-account, no-bridge pagehide diagnostics, browser-loaded bundle/source, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T13:56:10Z",
+      "event": "legacy_auth_entrypoint_trap_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a server-side trap for stale legacy auth entrypoints so old /api/auth document navigations redirect internally to /?legacy-auth=blocked and old auth/sign/wallet/RP API calls return 410 legacy_auth_removed with no external Location. Passed focused middleware/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, source command-surface scan, git diff --check, Spectacula validation, deployed dpl_Dj8UfKbDXmRtMi5hgj9B2QpfBqzx to https://veripost.io, and reran production config, health, legacy trap, fake-account, no-bridge pagehide diagnostic, browser-loaded bundle/source, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T14:05:58Z",
+      "event": "anchor_handoff_and_broader_auth_trap_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed app-owned window.location.assign from the post-proof X handoff, changed Post to X to an explicit same-window anchor, broadened client/server stale-auth traps for login/OAuth/SIWE/X-auth/world-auth/verify paths, and deployed dpl_5YwMMDiCyfn5xxfbXMueBvjGX6JW to https://veripost.io after pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, and source absence scans passed. Production probes confirmed root/config/health, document GET and POST /api/auth/signin/twitter 303 to /?legacy-auth=blocked, stale auth API routes returning 410 without Location, fake account-context proof rejection, runtime diagnostic 204, browser-loaded bundle absence of location.assign/window.open/auth/IDKit/MiniKit markers, and no 500 logs on the replacement deployment. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T14:15:31Z",
+      "event": "official_minikit_account_hydration_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored official MiniKit.install(appId) only for account-state hydration when a detected World App surface lacks account context, kept MiniKit walletAuth/signMessage/signTypedData, native IDKit, RP-signature, connector, Auth.js, X-login, world mini app universal-link, window.open, and window.location.assign call sites absent from app-owned proof source, passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, source command-surface scan, and git diff --check, deployed dpl_HX8FGSNkKJYFwsEuLbZoLHdy7mGi to https://veripost.io, and reran production config, health, CSP/header, stale-auth trap, fake-account, MiniKit-install diagnostic, browser-loaded root script, local build chunk, World ecosystem stale-copy, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T14:27:41Z",
+      "event": "in_app_minikit_wallet_auth_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored in-app MiniKit.walletAuth as the account-control proof, rejected fallback and wagmi execution so authentication cannot leave World App, added /api/proof-session/nonce with a short-lived HttpOnly challenge cookie, verified the wallet-auth SIWE payload before Address Book verification, kept native IDKit, RP-signature, connector, Auth.js, X-login, world mini app universal-link, sign-message, sign-typed-data, window.open, and window.location.assign call sites absent from the proof path, passed pnpm verify, deployed dpl_9LT9N2omx1V6aK5qJFsKF9PW3FbF to https://veripost.io, and reran production config, health, nonce, fake-SIWE proof rejection, missing wallet-auth payload rejection, stale-auth trap, browser-loaded root script, and production log probes. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T14:42:45Z",
+      "event": "native_wallet_auth_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a pre-command guard so the client waits for raw window.WorldApp, requires MiniKit.isInstalled(), and requires native wallet-auth v2 support before fetching /api/proof-session/nonce or calling MiniKit.walletAuth. Focused tests prove no challenge fetch or walletAuth call occurs when raw WorldApp, native MiniKit installation, or native wallet-auth command support is missing. Passed pnpm verify, deployed dpl_CwoA6q8s2Aoy4q5sgnkcwRRcbLvq to https://veripost.io, and reran production config, health, nonce, fake-SIWE proof rejection, missing wallet-auth payload rejection, stale-auth trap, browser-loaded root script, production log probes, and World ecosystem stale-copy probe. Public World ecosystem metadata still advertises X login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T14:55:45Z",
+      "event": "account_context_no_auth_prompt_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed MiniKit.walletAuth and /api/proof-session/nonce from the primary Post path so proof creation uses the already exposed World App account context, sends draftText plus worldAppAccount with the account-context marker, checks the submitted address through the World ID Address Book before storage, and cannot launch the wallet-auth prompt that was leaving the mini app. Added a stale /api/proof-session trap, passed focused account-context tests and pnpm verify, deployed dpl_954JjzpUYb3YLNB7or8RKyrwufCD to https://veripost.io, and reran production config, health, deleted nonce trap, fake unverified-address proof rejection, missing account rejection, stale-auth trap, browser-loaded root script, production log probes, and World ecosystem stale-copy probe. Public World ecosystem metadata still shows stale private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T15:04:45Z",
+      "event": "minikit_sdk_removed_no_auth_prompt_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed @worldcoin/minikit-js, MiniKit.install, and miniKitInstall diagnostics from the runtime so the primary Post path only reads already exposed window.WorldApp/window.MiniKit account state and cannot initiate SDK install or wallet-auth behavior. Passed focused account-context tests and pnpm verify, deployed dpl_HX6HntNywCUpitYmbinDcj73KjyL to https://veripost.io, and reran production config, health, deleted nonce trap, fake unverified-address proof rejection, missing account rejection, stale-auth trap, browser-loaded root script scan, production log probes, and World ecosystem stale-copy probe. Public World ecosystem metadata still shows stale X-login/private World ID proof copy, and real World App device testing remains pending."
+    },
+    {
+      "at": "2026-05-31T15:13:43Z",
+      "event": "proof_ready_evidence_marker_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Bumped the flow marker to world-app-account-context-2026-05-31-no-sdk-no-auth, added world_proof_ready client diagnostics and world_proof_created server success logging, passed focused account-context/no-native-proof/diagnostics/proof-route/middleware/GOALS tests and full pnpm verify, deployed dpl_4ncPLtmyuosp8pSGoWSpFzKAc3JC to https://veripost.io, and reran production config, health, stale nonce trap, fake unverified-address proof rejection, missing account rejection, stale auth trap, browser-loaded bundle/source, production log, and World ecosystem stale-copy probes. Public World ecosystem metadata still shows stale X-login/private World ID proof copy, and real-device world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T15:20:23Z",
+      "event": "runtime_session_correlation_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added x-veripost-runtime-session to /api/proofs requests and sanitized runtimeSessionId logging in proof success/rejection metadata so real-device client diagnostics, proof-route logs, and proof-ready state can be correlated without account or draft data. Passed focused compose/proof-route/GOALS tests and full pnpm verify, deployed dpl_AVo4x2MH5h5gMvS927ccRy27JdyV to https://veripost.io, and confirmed live config, health, stale nonce trap, fake account-context rejection with runtimeSessionId, root bundle markers, absence scans, and production logs. Real-device World App proof-ready evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T15:25:42Z",
+      "event": "runtime_session_panel_added",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added runtimeSessionId to the debug/error diagnostics panel so a real-device screen capture can be correlated with world_runtime_diagnostics and /api/proofs logs. Official World docs rechecked: raw window.WorldApp exposes wallet_address and verification_status inside the World App webview, while MiniKit commands are separate async actions. Passed focused compose/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_9oQFMLdyMgWSSm7mZaoKGtmPsevQ to https://veripost.io, and reran production config, health, stale nonce trap, fake account-context rejection with runtimeSessionId, root bundle marker/absence scans, and production log probes. Real-device World App proof-ready evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T15:33:10Z",
+      "event": "world_proof_trace_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a redacted World proof trace to the debug/error diagnostics panel with event, phase, account-source category, and in-app runtime booleans so a real-device run can show whether it reached account-check, account-context-ready, proof-request, and proof-ready without account or draft data. Passed focused compose/no-native-proof/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, deployed dpl_BFr1Cf9J8shV7oJJoThakSQAQHUL to https://veripost.io, and reran production config, health, stale nonce trap, fake account-context rejection with runtimeSessionId, root bundle marker/absence scans, and production log probes. Real-device World App proof-ready evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T15:44:37Z",
+      "event": "top_level_stale_auth_trap_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Hardened stale auth/proof-session/wallet-auth handling across API and top-level paths: shared the legacy cookie path list between client purge and server proxy, added proof-session and world wallet-auth cookie expirations, extended the in-app navigation guard to block same-origin top-level stale auth routes, and covered /proof routes so public proof pages are not trapped. Passed focused middleware/navigation/legacy-auth-state/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, and source absence scans; deployed dpl_J9hxJiYkx8oqL4yPFwwDg4bpjKCj to https://veripost.io; production probes confirmed health/config, top-level stale document redirects to /?legacy-auth=blocked, stale fetches returning 410 with no external Location, /proof/vp_123 not trapped, 57 cookie expiry headers, fake account-context rejection with runtimeSessionId, root bundle marker/absence scans, stale-route logs, and no 500s. Real-device World App proof-ready evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T15:54:25Z",
+      "event": "passive_account_context_capture_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added passive same-origin/native account-context capture so the runtime can use already exposed World App wallet context from message/custom-event payloads without sending native bridge commands, installing MiniKit, starting wallet-auth, or opening any redirect surface. The runtime rejects cross-origin account messages, redacts the wallet in diagnostics with accountSourceDetail world_app_message, and still verifies the submitted address through the backend Address Book before storage. Passed focused world-app-runtime/runtime-diagnostics/compose/no-native-proof/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, and source absence scans; deployed dpl_HSuCXxhvVq95UQR69KHsUEJn2Qxf to https://veripost.io; production probes confirmed health/config, runtime diagnostic 204 for world_app_message, top-level stale redirects, /proof/vp_123 not trapped, fake account-context rejection with runtimeSessionId, root bundle marker/absence scans, passive diagnostic logs, stale-route logs, and no 500s. Real-device World App proof-ready evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T16:03:02Z",
+      "event": "navigation_api_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a Navigation API navigate listener to the in-app navigation guard so supported browsers can block and log stale same-origin auth/proof-session route navigations and unexpected external auth navigations before unload, while still allowing the explicit post-proof X intent. Passed focused navigation/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, and source absence scans; deployed dpl_HiHekx3Eg7sZ8RX5BkmxY2r2n5ny to https://veripost.io; production probes confirmed health/config, stale document redirects, stale fetch 410s, /proof/vp_123 not trapped, fake account-context rejection with runtimeSessionId, runtime diagnostic 204 for navigation_api plus world_app_message, root bundle marker/absence scans, blocked-navigation logs, stale-route logs, and no 500s. Real-device World App proof-ready evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T16:15:04Z",
+      "event": "early_navigation_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added an inline pre-hydration navigation guard to the root layout so stale auth anchors/forms/window-open calls and supported Navigation API redirects can be blocked before React effects install the hydrated guard. The compose flow drains early blocked attempts into the existing redacted world_external_navigation_blocked diagnostics, and the explicit post-proof X intent remains allowed only after proof-ready state. Passed focused early-navigation/navigation/compose/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, and source absence scans; deployed dpl_AEAiQiKKf1p9FiHfZzQTJPcNX7fG to https://veripost.io; production probes confirmed health/config, stale document redirects, stale fetch 410s, /proof/vp_123 not trapped, fake account-context rejection with runtimeSessionId, runtime diagnostic 204 for early blocked navigation plus world_app_message, root inline-script/bundle marker and absence scans, early blocked-navigation logs, stale-route logs, and no 500s. Real-device World App proof-ready evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T16:28:30Z",
+      "event": "instrumentation_navigation_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Shared the early navigation guard implementation between the inline head script and src/instrumentation-client.ts so Next client startup also installs the stale-auth/external-navigation guard before app hydration. Passed focused early-navigation/navigation/compose/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, git diff --check, and source absence scans; deployed dpl_12dryJ1GprWcsYqKJQ6UueXbm6nz to https://veripost.io; production probes confirmed health/config, inline guard in the root head before body, instrumentation installer in the second early root client chunk, stale document redirects, stale HEAD/fetch 410s, /proof/vp_123 not trapped, fake account-context rejection with runtimeSessionId, runtime diagnostic 204 for blocked navigation, root bundle marker and absence scans, blocked-navigation logs, stale-route logs, and no 500s. Real-device World App proof-ready evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T16:48:30Z",
+      "event": "world_miniapp_wallet_auth_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Switched the primary proof path to official in-app MiniKit wallet auth with strict executedWith=minikit enforcement, added /api/world-miniapp/wallet-auth/nonce, verified SIWE/signature/origin/chain plus Address Book server-side, redacted invalid-signature verification logs, passed pnpm verify and audit, deployed dpl_3Yje7Zsxb1ZcPN1kEkbZhfDTaqyM, and reran production health/config/nonce/fake-proof/stale-route/bundle/log probes. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T16:56:00Z",
+      "event": "wallet_auth_preflight_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added stricter in-app wallet-auth preflight so nonce creation is blocked until raw WorldApp runtime, native MiniKit bridge transport, wallet-auth v2 support, and no MiniKit web fallback adapter are confirmed. Passed pnpm verify, audit, Spectacula validation, and git diff --check; deployed dpl_4TyTGkTLpjdQAq34fYTiNA7kvWiJ; reran production health/config/nonce/fake-proof/stale-route/bundle/log probes. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T17:06:05Z",
+      "event": "account_context_only_restored",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed wallet-auth from the active proof path after the observed auth step still left the mini app. The client now submits already exposed World App account context, /api/proofs verifies the submitted address with Address Book, @worldcoin/minikit-js and /api/world-miniapp/wallet-auth/nonce are removed, focused account-context tests passed, and full unit tests passed. Full verify, deploy, production probes, and real-device World App success evidence remain pending."
+    },
+    {
+      "at": "2026-05-31T17:13:21Z",
+      "event": "account_context_only_redeployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm verify, audit, Spectacula validation, and git diff --check; deployed dpl_DmUWqzo773QXyeemzcnPz1N77kph to https://veripost.io; production probes confirmed health/config, account-context headers, removed wallet-auth nonce route 410 trap, stale proof-session/world-wallet-auth traps, fake account-context rejection, cross-origin rejection, browser-loaded marker/absence scans, and redacted Vercel logs. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T17:22:30Z",
+      "event": "path_scoped_csp_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Narrowed Content-Security-Policy navigate-to from broad X/Twitter host navigation to only https://x.com/intent/tweet and https://twitter.com/intent/tweet, matching the post-proof X intent allowlist and reducing stale-shell X OAuth escape risk. Passed focused middleware/GOALS/navigation tests, pnpm verify, deployed dpl_68xr9p37rtme54ewd7jcV8XXiG7R to https://veripost.io, and reran production health/config/root CSP, removed wallet-auth nonce trap, stale X-auth document redirect, stale world-wallet-auth trap, fake account-context rejection, browser-loaded marker/absence scan, and redacted Vercel log probes. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T17:27:17Z",
+      "event": "stale_shell_service_worker_purge_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added client CacheStorage deletion and service-worker unregistration to the legacy auth state purge, plus self-unregistering /sw.js and /service-worker.js kill scripts with no-store, Clear-Site-Data, and Service-Worker-Allowed headers. Passed focused legacy-auth/GOALS/middleware tests and pnpm verify; deployed dpl_CGuLoe2hVNt7szF9h8oe93ReYaTZ to https://veripost.io; production probes confirmed root deployment marker, path-scoped CSP, /sw.js and /service-worker.js unregister/cache-delete scripts, removed wallet-auth nonce trap, stale X-auth document redirect, fake account-context rejection, and redacted Vercel logs. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T17:32:55Z",
+      "event": "expanded_legacy_endpoint_traps_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded server proxy, hydrated navigation guard, early navigation guard, and legacy cookie path coverage for common stale MiniKit/SIWE sample endpoints including /api/nonce, /api/complete-siwe, /api/verify, /api/session, /api/world-miniapp/nonce, and /world-miniapp/complete-siwe. Passed focused middleware/navigation/GOALS tests and pnpm verify; deployed dpl_8rfhnYFn2sfENdXY9DGCXigbTuij to https://veripost.io; production probes confirmed all expanded endpoints return same-origin 410 legacy_auth_removed with no external Location, account-context bundle markers remain present, forbidden wallet-auth markers remain absent, and Vercel logs are redacted. Direct world.org listing still has stale private World ID proof copy and no account-context copy. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T17:42:04Z",
+      "event": "legacy_auth_blocked_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added client recovery for /?legacy-auth=blocked so stale document auth redirects are consumed in-app, the URL marker is stripped, a no-auth-needed notice is shown, redacted world_external_navigation_blocked diagnostics are recorded, and the composer remains usable. Passed focused compose/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, git diff --check, and JSON validation; deployed dpl_8cYvTAz6m6HPbzPLzPdMz1Ke7hva to https://veripost.io; production probes confirmed health/config, root deployment marker, path-scoped CSP, /api/nonce and /world-miniapp/complete-siwe fetch 410 traps plus document 303 redirects to /?legacy-auth=blocked, recovery markers in live client chunks, forbidden wallet-auth markers absent, fake account-context rejection with redacted runtime session logs, and legacy_auth_entrypoint_blocked logs. Direct world.org listing still has stale private World ID proof copy and no account-context copy. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T17:49:00Z",
+      "event": "passive_world_origin_account_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Hardened passive account-context capture so known World origins are accepted only inside an existing World App surface, additional wrapper keys and address aliases such as accountContext/context/profile/session and ethereumAddress are recognized, and no MiniKit install, wallet-auth, sign, verify, or native bridge command is sent. Passed focused world-app-runtime/GOALS tests, pnpm verify with 109 tests, pnpm audit --audit-level moderate, and git diff --check; deployed dpl_CfuD6btswjgWgHP4ynPt53o1KsJU to https://veripost.io; production probes confirmed health/config, root deployment marker, path-scoped CSP, stale fetch 410s, stale document 303 redirects to /?legacy-auth=blocked, passive parser markers in live client chunks, forbidden MiniKit.install/wallet-auth/nonce/connector/X-login markers absent, fake account-context rejection with redacted runtime session logs, and legacy_auth_entrypoint_blocked logs. Direct world.org listing still has stale private World ID proof copy and no account-context copy. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T17:58:30Z",
+      "event": "state_init_handshake_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a state-only World App init handshake so the runtime sends one MiniKit-compatible init payload through native transport when no logged-in account context is visible after config loads, while still avoiding the MiniKit SDK, wallet-auth, sign, verify, connector, and redirect commands. Passed focused state-init/GOALS/compose tests, pnpm verify with 110 tests, pnpm audit --audit-level moderate, and deployed dpl_8Rphr9JwtvKJvY89EPEmDb7kvYLA to https://veripost.io. Production probes confirmed health/config, root deployment marker, stale fetch and document traps, service-worker purge headers, state-init bundle markers, forbidden auth/sign command markers absent, fake account-context rejection, redacted worldAppInit diagnostics, and legacy_auth_entrypoint_blocked logs. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T18:05:19Z",
+      "event": "state_init_retry_telemetry_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed the state-only World App init handshake from one-shot to cooldown-limited retries with a fixed attempt cap, and added world_app_state_init_sent diagnostics carrying attempt count and native transport. Passed focused runtime/diagnostics/GOALS tests, pnpm verify with 111 tests, pnpm audit --audit-level moderate, and deployed dpl_9NceWqVHRZw6fJZPAKu6A3YMSN5c to https://veripost.io. Production probes confirmed health/config, root deployment marker, stale fetch and document traps, init-retry bundle markers, forbidden auth/sign command markers absent, fake account-context rejection, redacted retry diagnostics, and legacy_auth_entrypoint_blocked logs. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T18:11:58Z",
+      "event": "state_only_minikit_container_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a state-only window.MiniKit container before the init handshake, matching the safe state-object part of official MiniKit initialization while omitting command methods, wallet-auth, sign, verify, connector, and redirect surfaces. Passed focused runtime/diagnostics/GOALS tests, pnpm verify with 112 tests, pnpm audit --audit-level moderate, and deployed dpl_HZiswEo2m96jGLRmuA7WPWTh4oDz to https://veripost.io. Production probes confirmed health/config, root deployment marker, stale fetch and document traps, state-container bundle markers, forbidden auth/sign command and command-container markers absent, fake account-context rejection, redacted stateContainer diagnostics, and legacy_auth_entrypoint_blocked logs. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T18:20:19Z",
+      "event": "readonly_minikit_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Made state-only window.MiniKit container assignment non-fatal so read-only or unusual MiniKit objects cannot prevent the safe init handshake from being sent inside World App. Passed focused runtime/GOALS tests, pnpm verify with 113 tests, pnpm audit --audit-level moderate, and deployed dpl_B5BMf53Vy9QREMEKLnP3RvDJ4f6W to https://veripost.io. Production probes confirmed health/config, root deployment marker, stale fetch and document traps, service-worker purge headers, state-container bundle markers, forbidden auth/sign command and command-container markers absent, fake account-context rejection, redacted stateContainer missing diagnostics, and no world_proof_created or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T18:27:14Z",
+      "event": "direct_global_alias_account_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added direct window.worldApp, window.world_app, and window.miniKit account-state alias reads so World App bridge casing variants can expose the already logged-in account without auth. Passed focused runtime/GOALS tests, pnpm verify with 115 tests, pnpm audit --audit-level moderate, and deployed dpl_736WpdxnzkbSPYs1Qduxkssdm1wf to https://veripost.io. Production probes confirmed health/config, root deployment marker, stale fetch and document traps, direct-alias bundle markers, forbidden auth/sign command and command-container markers absent, fake account-context rejection, redacted alias diagnostics, and no world_proof_created or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T18:34:07Z",
+      "event": "blocked_navigation_continuation_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed live stale/external navigation blocks during the World account check from an error state to an in-app notice, so stale auth events cannot abort account-context waiting. Passed focused compose navigation-continuation tests, pnpm verify with 116 tests, pnpm audit --audit-level moderate, and deployed dpl_CzCeG21L6A7jGeqq6SLGxZwQ7jUn to https://veripost.io. Production probes confirmed health/config, root deployment marker, stale fetch and document traps, blocked-navigation continuation bundle markers, forbidden auth/sign command and command-container markers absent, fake account-context rejection, redacted blocked-navigation diagnostics with phase verifying_world, and no world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T18:39:45Z",
+      "event": "early_blocked_navigation_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added immediate redacted diagnostics from the pre-hydration navigation guard when it blocks stale auth/external navigation before React loads, while preserving the queued blocked attempt for the hydrated compose flow. Passed focused early-navigation/GOALS/runtime-diagnostics tests, pnpm verify with 117 tests, and deployed dpl_GpB4aiN1GNk3sqhZ9iu2gp9Sx61f to https://veripost.io. Production probes confirmed health/config, root deployment marker, stale fetch and document traps, early diagnostic bundle markers, forbidden auth/sign command and command-container markers absent, synthetic probe-runtime-early-block logs with phase loading and walletAddress missing, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T18:45:54Z",
+      "event": "expanded_idkit_rp_stale_traps_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded stale redirect-capable traps for IDKit/RP/signature/world-id shortcut paths including /api/idkit, /api/rp-signature, /api/sign, /api/world-id/verify, /api/world-miniapp/idkit, /world-id/verify, and /world-miniapp/rp-signature across the server proxy, hydrated guard, and pre-hydration guard. Passed focused middleware/navigation/early-navigation/GOALS tests, pnpm verify with 117 tests, and deployed dpl_9aL9stPeQfTb8tgEtEbRPWpfJtJq to https://veripost.io. Production probes confirmed all expanded routes return same-origin 410 or internal 303 /?legacy-auth=blocked with no external Location, bundle markers are present, forbidden auth/sign command and command-container markers remain absent, stale route logs are redacted, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T18:54:41Z",
+      "event": "expanded_account_shape_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded no-auth account-context parsing for nested WorldApp wrapper profiles, accounts/wallets arrays, passive wrapper metadata, and root MiniKit account/version/device/verification state. Passed focused world-app-runtime/GOALS tests, pnpm verify with 120 tests, and deployed dpl_7VQt52BCZGQVNE5PeXfywNy89BMg to https://veripost.io. Production probes confirmed health/config, root deployment marker, account-shape bundle markers, forbidden MiniKit SDK/auth/sign/connector markers absent, accepted synthetic account-shape diagnostics, fake account-context rejection with world_address_unverified, stale document 303 /?legacy-auth=blocked, expanded stale route traps, redacted production logs, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T19:04:05Z",
+      "event": "nested_account_state_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded no-auth account-context parsing for data/payload/miniApp wrapper chains and nested MiniKit state.user account/version/device/verification state. Passed focused world-app-runtime/GOALS tests, pnpm verify with 122 tests, and deployed dpl_EjNKwDr3FGZdHFWzhDHQRHPqZcuW to https://veripost.io. Production probes confirmed health/config, root deployment marker, nested wrapper bundle markers, forbidden MiniKit SDK/auth/sign/connector markers absent, accepted synthetic nested-state diagnostics, fake account-context rejection with world_address_unverified, stale document 303 /?legacy-auth=blocked, expanded stale route traps, redacted production logs, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T19:12:58Z",
+      "event": "noninvasive_state_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed client-created window.MiniKit setup from the init-only state handshake so the runtime does not occupy or mutate the host-owned MiniKit global. Passed focused runtime/diagnostics/GOALS tests, pnpm verify with 122 tests, and deployed dpl_5X6os6ECrPHaoDVPx81j2EocsK28 to https://veripost.io. Production probes confirmed health/config, root deployment marker, skipped state-container bundle marker, no MiniKit SDK/install/wallet-auth/sign native command markers, no client-created MiniKit object assignment, accepted synthetic stateContainer skipped diagnostics, fake account-context rejection with world_address_unverified, expanded stale route traps, redacted production logs, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T19:20:18Z",
+      "event": "early_noninvasive_state_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Moved the non-invasive init-only state handshake to startup when native World App transport is already present, before /api/config returns, while keeping the runtime-wide cooldown cap and avoiding MiniKit global mutation. Passed focused runtime/compose/diagnostics/GOALS tests, pnpm verify with 122 tests, and deployed dpl_2odYMvnp8jW5TzvL2oEmWV9nYbVV to https://veripost.io. Production probes confirmed health/config, root deployment marker, early loading diagnostic bundle marker, no MiniKit SDK/install/wallet-auth/sign native command markers, no client-created MiniKit object assignment, accepted synthetic phase loading stateContainer skipped diagnostics, fake account-context rejection with world_address_unverified, expanded stale route traps, redacted production logs, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T19:30:11Z",
+      "event": "passive_wallet_provider_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added World App-surface-gated passive wallet provider account reads from window.ethereum selectedAddress and nested provider account state without ethereum.request, eth_requestAccounts, wallet permission, wallet-auth, or sign commands. Passed focused runtime/compose/diagnostics/GOALS tests, pnpm verify with 125 tests, and deployed dpl_GPd2ycZYSihEYeeqXGTV4RTjwnNn to https://veripost.io. Production probes confirmed health/config, root deployment marker, passive wallet_provider bundle markers, forbidden auth/sign/request markers absent, accepted synthetic wallet_provider diagnostics, fake account-context rejection with world_address_unverified, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T19:37:34Z",
+      "event": "document_message_account_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added document-level passive message listeners with capture-phase handling so Android-style WebView document message delivery can expose World App account context without auth. Passed focused runtime/GOALS tests, focused runtime/compose/diagnostics/GOALS tests, pnpm verify with 126 tests, and deployed dpl_5PLELKbCDVyeDycokcC8WEixsDDz to https://veripost.io. Production probes confirmed health/config, root deployment marker, document-message bundle markers, forbidden auth/sign/request markers absent, accepted synthetic Android-style document-message diagnostics, fake account-context rejection with world_address_unverified, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T19:47:52Z",
+      "event": "official_eip1193_provider_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added World App-surface-gated passive reads for official World EIP-1193 cached address/provider state such as window.__worldapp_eip1193_address__, window.__worldapp_eip1193_provider__, _accounts, accountAddress, and primaryAddress without request/auth calls. Passed focused runtime/GOALS tests, focused runtime/compose/diagnostics/GOALS tests, pnpm verify with 129 tests, pnpm audit --audit-level moderate, and deployed dpl_FRJ2Uc2ABatz9ppYFY8BbkknqHw7 to https://veripost.io. Production probes confirmed health/config, root deployment marker, EIP-1193 bundle markers, forbidden auth/sign/request markers absent, accepted synthetic EIP-1193 wallet_provider diagnostics, fake account-context rejection with world_address_unverified, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. The World ecosystem listing still has stale Log in with X/private proof copy and must be updated in Developer Portal."
+    },
+    {
+      "at": "2026-05-31T19:55:56Z",
+      "event": "guarded_worldid_alias_context_supported",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added guarded World/WorldID/worldID/worldId/world_id/worldcoin direct and passive account-context aliases. Secondary globals are ignored unless they carry account-shaped World state, preventing unrelated window.world objects from satisfying the runtime. Passed focused WorldID alias tests, focused runtime/compose/diagnostics/GOALS tests, pnpm verify with 132 tests, pnpm audit --audit-level moderate, Spectacula validation, and git diff --check; deployed dpl_BAYX5YvFsEJ5spTo9k9oB2gS1Scs to https://veripost.io; production probes confirmed health/config, root deployment marker, guarded alias bundle markers, forbidden auth/sign/request markers absent, accepted synthetic WorldID alias diagnostics, fake account-context rejection with world_address_unverified, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. The World ecosystem listing still has stale Log in with X/private proof copy and must be updated in Developer Portal."
+    },
+    {
+      "at": "2026-05-31T20:10:16Z",
+      "event": "alternate_bridge_and_event_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added no-auth alternate native bridge support for MiniKit/WorldApp/ReactNativeWebView init-only state handshakes and passive WorldID/worldcoin custom event names for account-context delivery. Passed focused runtime/GOALS tests, focused runtime/compose/diagnostics/GOALS tests with 66 tests, pnpm verify with 135 tests, pnpm audit --audit-level moderate, deployed dpl_3FpR2HGABDHaAmHB3eH29AiQKaBR to https://veripost.io, and confirmed health/config, root deployment marker, bridge/event bundle markers, forbidden auth/sign/request markers absent, accepted synthetic bridge-alias and WorldID custom-event diagnostics, fake account-context rejection with world_address_unverified, and no real-device world_proof_created, world_proof_ready, or world_runtime_error logs yet. The World ecosystem listing still has stale Log in with X/private proof copy and must be updated in Developer Portal."
+    },
+    {
+      "at": "2026-05-31T20:30:01Z",
+      "event": "native_idkit_proof_flow_deployed_gated",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Replaced production account-context-only proofing with native @worldcoin/idkit-core proofing inside World App, added /api/world-proof/request RP signing, added backend World Developer proof verification, installed temporary WorldApp/MiniKit/ReactNativeWebView bridge aliases for IDKit, and failed closed when connectorURI is returned. Passed focused native IDKit/proof/compose/runtime tests, typecheck, pnpm verify with 146 tests, and pnpm audit --audit-level moderate; deployed dpl_BibYsByTEYhcK9q1TWXm1i5gbSuD to https://veripost.io. Production probes confirmed native IDKit bundle markers and absence of old wallet/auth/request/connector-opening markers. Production remains gated until WORLD_ID_RP_ID and WORLD_ID_RP_SIGNING_KEY are configured; /api/config reports hasWorldIdProofConfig false, /api/health returns 503, and /api/world-proof/request returns world_id_proof_not_configured. Real-device World App success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T20:37:07Z",
+      "event": "rp_env_aliases_supported",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added server-only WORLD_RP_ID and WORLD_RP_SIGNING_KEY aliases for the native IDKit RP config so restored legacy-named secrets can satisfy /api/world-proof/request without changing the no-connector/no-wallet-auth proof path. Focused config and RP signing route tests passed; pnpm verify passed with 150 tests; deployed dpl_CcXJimdGRju87LoyQRwfhrQDwHho to https://veripost.io. Production env listing confirms neither the preferred WORLD_ID_* names nor the accepted WORLD_RP_* aliases are currently present, so production still needs RP env restoration and redeploy before real-device proof testing."
+    },
+    {
+      "at": "2026-05-31T20:43:59Z",
+      "event": "idkit_native_transport_metadata_normalized",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Aligned the World App bridge shim with installed @worldcoin/idkit-core native transport expectations by normalizing host supportedCommands/supportedVersions into supported_commands/supported_versions and temporarily aliasing existing lowercase miniKit to MiniKit for IDKit response subscriptions. Focused runtime/IDKit/GOALS tests passed, pnpm verify passed with 152 tests, and deployed dpl_EdYx1VsGKr4cux6DGjreUUkfLyAz to https://veripost.io. Production remains gated on missing RP env vars and still needs real-device World App proof-ready/proof-created evidence."
+    },
+    {
+      "at": "2026-05-31T20:57:30Z",
+      "event": "implementation_checkpoint",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added server-only recovered RP signer fallback to the current native IDKit source, updated proof verification to use the recovered RP id when needed, passed focused tests/typecheck/pnpm verify with 155 tests, deployed dpl_Ghp3G1JAdPm33xX6fNEbjLW71mWz, and confirmed production config, health, RP request, fake-proof rejection, bundle, stale-route, and log probes. Real World App device success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T21:04:00Z",
+      "event": "idkit_bridge_only_native_verify_added",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added bridge-only native IDKit fallback for World App runtimes that expose native minikit/Android transport but no window.WorldApp object, preventing IDKit from falling back to a web connector request in that shape. Focused tests, typecheck, and pnpm verify passed with 157 tests; deployed dpl_FyahGQw4DD5dVJ3kr9xiwVJ6VWje and confirmed production route/bundle probes. Real World App device success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T21:08:00Z",
+      "event": "installed_idkit_bridge_regression_added",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added regression coverage that imports the installed @worldcoin/idkit-core package with a bridge-only World App shape and confirms prepareWorldIdKitNativeBridge forces a native verify command with connectorURI empty. pnpm typecheck and pnpm verify passed with 158 tests. Runtime deployment remains dpl_FyahGQw4DD5dVJ3kr9xiwVJ6VWje; real World App device success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T21:14:05Z",
+      "event": "idkit_user_presence_required_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Set native IDKit requests to require_user_presence:true so World App must report user presence before VeriPost accepts completion. Focused native IDKit/runtime/GOALS tests, pnpm typecheck, and pnpm verify passed with 158 tests; deployed dpl_J6YnhgoQs9ABpNwv4R4U67pHTj6z to https://veripost.io. Production probes confirmed data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, require_user_presence and native IDKit bundle markers, forbidden wallet/auth/connector markers absent, fake proof rejected at World verification, and stale wallet-auth navigation blocked internally. Real World App device success evidence remains pending."
+    },
+    {
+      "at": "2026-05-31T21:20:17Z",
+      "event": "idkit_native_verify_v2_forced_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Forced bridge-only and stale WorldApp native verify metadata onto verify v2 so installed IDKit core cannot silently choose the older verify v1 path when native transport exists. Focused native IDKit/runtime/GOALS tests, pnpm typecheck, pnpm verify with 159 tests, and pnpm audit --audit-level moderate passed; deployed dpl_9p8QvZUHVJQkgaxrn4F8tY6VR6D7 to https://veripost.io. Production probes confirmed data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, supported_versions:[2] and require_user_presence bundle markers, forbidden wallet/auth/connector markers absent, fake proof rejected at World verification, stale wallet-auth navigation blocked internally, and no real-device proof-ready/proof-created logs yet."
+    },
+    {
+      "at": "2026-05-31T21:27:48Z",
+      "event": "idkit_native_prepared_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added redacted world_idkit_native_prepared diagnostics carrying only idKitBridge.verifyCommandVersion after the temporary native IDKit bridge aliases are installed. Focused runtime diagnostics, compose, World App runtime, and GOALS tests passed; pnpm typecheck, pnpm verify with 159 tests, and pnpm audit --audit-level moderate passed; deployed dpl_HmNfcFJczifdmf4W8CAjmBKprLHL to https://veripost.io. Production probes confirmed data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, supported_versions:[2], require_user_presence, world_idkit_native_prepared, and verifyCommandVersion bundle markers, forbidden wallet/auth/connector markers absent, fake proof rejected at World verification, stale wallet-auth navigation blocked internally, and no real-device prepared/proof-ready/proof-created logs yet."
+    },
+    {
+      "at": "2026-05-31T21:37:03Z",
+      "event": "idkit_native_advertised_verify_version_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed the native IDKit bridge shim to preserve the World App-advertised verify command version instead of forcing v2, and to synthesize verify v1 only when bridge transport exists without a WorldApp descriptor. Focused native IDKit/runtime/diagnostics/compose/GOALS tests, pnpm typecheck, pnpm verify with 159 tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed; deployed dpl_GWAzwEqeaUPfTrU75mZiuvqY2rbT to https://veripost.io. Production probes confirmed data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, supported_versions:[1], require_user_presence, world_idkit_native_prepared, and verifyCommandVersion bundle markers, forbidden wallet/auth/connector markers absent, fake proof rejected at World verification, stale wallet-auth navigation blocked internally, and no real-device prepared/proof-ready/proof-created logs yet."
+    },
+    {
+      "at": "2026-06-01T01:39:20Z",
+      "event": "idkit_native_command_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a temporary native IDKit proof-window command guard that blocks known unsafe native commands such as open-url and wallet-auth while allowing init and verify, plus redacted world_native_command_blocked diagnostics with only sanitized command names. Focused runtime/diagnostics/compose/GOALS tests, pnpm typecheck, and pnpm verify with 213 tests passed; deployed dpl_2usUQssFSm91RD8ABSEK94GPjrQZ to https://veripost.io. Production probes confirmed data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, supported_versions:[1], require_user_presence, world_native_command_blocked bundle markers, forbidden MiniKit SDK/wallet-auth API/connector-opening markers absent, fake proof rejected at World verification, stale wallet-auth navigation recovered internally, and a synthetic unsafe-command diagnostic accepted. No real-device prepared/proof-ready/proof-created logs yet."
+    },
+    {
+      "at": "2026-06-01T01:46:45Z",
+      "event": "idkit_native_command_guard_tightened",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Tightened the temporary native IDKit proof-window command guard so it blocks every native command except init and verify, instead of only known unsafe command names. Focused World App runtime and GOALS tests passed. Deployment and full production refresh are pending for this tighter guard; real-device prepared/proof-ready/proof-created logs remain missing."
+    },
+    {
+      "at": "2026-06-01T01:51:45Z",
+      "event": "idkit_native_command_guard_tightened_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Deployed the tightened native-command guard as dpl_8iRq1H2PDkmLwj52vhwcjvCiABNM to https://veripost.io. Production probes confirmed the new data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, fake proof rejection at World verification, stale wallet-auth nonce navigation recovered internally with no Location, native IDKit bundle markers, forbidden MiniKit SDK/wallet-auth/connector-opening/signer markers absent, and a synthetic runtime-native-guard-probe-v2 world_native_command_blocked diagnostic accepted. No real-device prepared/proof-ready/proof-created logs yet."
+    },
+    {
+      "at": "2026-06-01T01:58:22Z",
+      "event": "idkit_bridge_only_verify_v2_preferred",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed the bridge-only native IDKit fallback to synthesize supported_versions [2,1] so installed IDKit core sends native verify v2 when World App exposes only raw bridge transport and no command metadata, while still preserving explicit host-advertised v1. Focused runtime, IDKit proof, compose, and GOALS tests passed. Deployment and real-device prepared/proof-ready/proof-created logs remain pending."
+    },
+    {
+      "at": "2026-06-01T02:03:24Z",
+      "event": "idkit_bridge_only_verify_v2_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Deployed the v2-first bridge-only native IDKit fallback as dpl_8kH5j2nJqqrdRrSZ3375mm4ZFm6c to https://veripost.io. Production probes confirmed data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, supported_versions:[2,1], fake proof rejected at World verification, stale wallet-auth nonce navigation recovered internally with no Location, native IDKit bundle markers present, and forbidden MiniKit SDK/wallet-auth/connector-opening/signer markers absent. Logs show redacted world_idkit_rp_context_created and fake-proof world_proof_rejected; no real-device prepared/proof-ready/proof-created logs yet."
+    },
+    {
+      "at": "2026-06-01T02:13:40Z",
+      "event": "idkit_versionless_verify_metadata_repaired_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Repaired host WorldApp verify commands that omit usable supported_versions by adding v2-first [2,1] during temporary native IDKit bridge preparation, while preserving explicit host-advertised versions such as [1]. Focused runtime/IDKit/compose/GOALS tests, pnpm typecheck, and pnpm verify with 215 tests passed; deployed dpl_7DCdHQkVw31BMnpCMZ1RKuLgeFMy to https://veripost.io. Production probes confirmed data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, supported_versions:[2,1], fake proof rejected at World verification, stale auth and mini app shell recovery, native IDKit bundle markers present, and forbidden MiniKit SDK/wallet-auth/connector-opening/signer markers absent. Logs show redacted world_idkit_rp_context_created and fake-proof world_proof_rejected; no real-device prepared/proof-ready/proof-created logs yet."
+    },
+    {
+      "at": "2026-06-01T02:22:06Z",
+      "event": "idkit_v1_host_metadata_forced_v2_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Forced temporary native IDKit verify metadata to v2-first [2,1] whenever native transport exists, including v1-only host metadata, so installed IDKit core cannot choose the older native verify v1 payload during production proofing. Original host metadata is restored after cleanup, so unsupported hosts fail inline instead of opening auth or connector navigation. Focused runtime/IDKit/compose/GOALS tests, pnpm typecheck, and pnpm verify with 215 tests passed; deployed dpl_5cTMEEP63iDHGuVP8RVHL4YnMcDv to https://veripost.io. Production probes confirmed data-dpl-id, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, supported_versions:[2,1], fake proof rejected at World verification, stale auth recovery, native IDKit bundle markers present, and forbidden MiniKit SDK/wallet-auth/connector-opening/signer markers absent. Logs show redacted world_idkit_rp_context_created, fake-proof world_proof_rejected, and stale-auth legacy_auth_entrypoint_blocked; no real-device prepared/proof-ready/proof-created logs yet."
+    },
+    {
+      "at": "2026-06-01T02:26:31Z",
+      "event": "world_listing_stale_metadata_documented",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Probed the canonical World launch URL for app_dc56f8eecb48c4d395981ec1ca5c6329. It resolved to https://world.org/ecosystem/app_dc56f8eecb48c4d395981ec1ca5c6329?path=%2F, returned HTTP 200, still contained stale Log in with X/private World ID proof listing copy, and did not expose veripost.io, api/auth, callbackUrl, or redirect_uri markers in the public HTML. Updated the handoff docs to treat this as a Developer Portal metadata update, separate from the deployed app's same-origin native proof flow."
+    },
+    {
+      "at": "2026-06-01T02:37:35Z",
+      "event": "idkit_native_no_init_proof_path_prepared",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Suppressed app-owned MiniKit init and state handshakes in the production IDKit proof path while preserving native response-subscription aliases. The proof-window native command guard now allows only verify, the passive context refresh skips app-owned state initialization when proof config is present, and the app-shell flow marker is world-miniapp-account-context-2026-06-01. Focused runtime/IDKit/compose/GOALS tests and typecheck passed; full post-update verification, deployment, production probes, and real-device prepared/proof-ready/proof-created logs remain pending."
+    },
+    {
+      "at": "2026-06-01T02:41:26Z",
+      "event": "idkit_native_no_init_proof_path_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check for the no-init proof-path update. Deployed dpl_4odEQXM6yvqfukF2Kz7X1MWhe5Yy to https://veripost.io. Production probes confirmed root data-dpl-id and X-VeriPost-Flow world-miniapp-account-context-2026-06-01, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, fake proof rejection at World verification, stale auth and /world-miniapp recovery, required native IDKit bundle markers, and absence of wallet-auth/auth/connector-opening/signer-bypass markers. Logs show redacted world_idkit_rp_context_created, fake-proof world_proof_rejected, legacy_auth_entrypoint_blocked, and legacy_miniapp_shell_entrypoint_blocked; real-device prepared/proof-ready/proof-created logs remain missing."
+    },
+    {
+      "at": "2026-06-01T02:50:02Z",
+      "event": "idkit_native_host_verify_version_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed temporary IDKit bridge metadata to preserve host-advertised native verify versions and synthesize native verify v1 only when raw native transport lacks usable command metadata, matching the current World Mini App raw WorldApp example where verify may be v1 while still native. Focused runtime/IDKit/compose/GOALS tests and pnpm verify with 215 tests passed. Deployed dpl_2G32198CYS6wGcQLVvkkvFftS8V1 to https://veripost.io. Production probes confirmed root data-dpl-id and X-VeriPost-Flow world-miniapp-account-context-2026-06-01, config/health readiness, RP context creation for rp_fcb38dfb09a0ec18, fake proof rejection at World verification, stale auth and /world-miniapp recovery, required native IDKit bundle markers including supported_versions:[1], and absence of wallet-auth/auth/connector-opening/signer-bypass markers plus supported_versions:[2,1]. Logs show redacted world_idkit_rp_context_created, fake-proof world_proof_rejected, legacy_auth_entrypoint_blocked, and legacy_miniapp_shell_entrypoint_blocked; real-device prepared/proof-ready/proof-created logs remain missing."
+    },
+    {
+      "at": "2026-06-01T03:10:00Z",
+      "event": "account_context_flow_restored",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored logged-in World App account context as the active Post proof path to avoid World App IDKit/auth prompts leaving the mini app. Compose no longer calls /api/world-proof/request or requestNativeWorldIdProof; production /api/proofs accepts account-context and verifies through the World ID Address Book. Focused account-context tests and pnpm typecheck passed; full verification, deploy, production probes, and real-device evidence remain pending."
+    },
+    {
+      "at": "2026-06-01T03:20:00Z",
+      "event": "account_context_flow_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check; deployed dpl_Aamcr1WHam6AzjAc6RpmQRe79k9Q to https://veripost.io; confirmed root marker/header, config/health, fake account-context rejection with world_address_unverified, stale auth recovery, browser asset account-context markers with active IDKit/request/connector markers absent, and redacted world_proof_rejected, legacy_auth_entrypoint_blocked, and legacy_miniapp_shell_entrypoint_blocked logs. Real-device proof-ready/proof-created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T03:26:54Z",
+      "event": "account_context_hard_removal_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the remaining native IDKit/RP compatibility surface from source and production, including @worldcoin/idkit-core, /api/world-proof/request, IDKit proof helpers, native proof readiness fields, native IDKit diagnostics, and the dormant client native-IDKit bridge API. pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed; deployed dpl_45YmLiZGST2cpQsmKG3XtnsCeUV1 to https://veripost.io. Production probes confirmed root marker/header, config/health without native proof fields, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, stale native proof payload rejection with invalid_request, stale auth and /world-miniapp same-origin recovery, browser asset absence for old native IDKit/request/auth/wallet/connector markers, and redacted Vercel logs for the fake account-context rejection, stale native payload rejection, legacy_auth_entrypoint_blocked, and legacy_miniapp_shell_entrypoint_blocked. Real-device world_account_context_detected, world_proof_ready, and world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T03:34:51Z",
+      "event": "host_owned_minikit_state_prepared",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the synthetic app-owned window.MiniKit event bridge from the account-context runtime so VeriPost no longer shadows host-owned MiniKit state. The runtime still reads existing window.WorldApp/window.MiniKit account state, passive account-context messages, and cached World App provider state, and still sends only the init-state message when native transport exists without account context. Focused world-app-runtime and GOALS tests passed, and pnpm typecheck passed. Full verification, redeploy, production probes, and real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remain pending for this patch."
+    },
+    {
+      "at": "2026-06-01T03:38:37Z",
+      "event": "host_owned_minikit_state_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check; deployed dpl_GrFRetSBMejXoSRpYjPT5TY7pjex to https://veripost.io. Production probes confirmed root marker/header, config/health without native proof fields, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, stale native proof payload rejection with invalid_request, stale auth and /world-miniapp same-origin recovery, browser asset absence for old native IDKit/request/auth/wallet/connector markers and synthetic MiniKit bridge markers, and redacted Vercel logs for fake-proof rejection, stale native payload rejection, legacy_auth_entrypoint_blocked, and legacy_miniapp_shell_entrypoint_blocked. Real-device world_account_context_detected, world_proof_ready, and world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T03:46:31Z",
+      "event": "post_waits_for_pending_account_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Allowed Post in a World App surface to start the in-app account-context wait even when the account snapshot is pending before the tap, refreshed World App runtime state on tap, and kept only the init-state/account-context path without auth or connector commands. Focused pending-account tests, pnpm typecheck, pnpm verify with 172 Vitest tests plus 7 GOALS tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_2TtsLrQoaxVtYvzAWC5MBX4WqcKA to https://veripost.io and reran root/config/health/removed-route/fake-account/stale-worldId/bundle/log probes. Logs confirm probe rejections and legacy traps; real-device world_account_context_detected, world_app_state_init_sent, world_proof_ready, and world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T03:54:48Z",
+      "event": "static_legacy_auth_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed stale auth and mini app shell document recovery from a Next app-shell rewrite to minimal same-origin static HTML with x-veripost-legacy-recovery: static, no Location, no middleware rewrite, no Next route state, and no OAuth/callback leakage. pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_DGPt99MShhagJJoXSfEjp1oGk3k5 to https://veripost.io and reran root/config/removed-route/static-auth/static-miniapp/fake-account/stale-worldId/bundle/log probes. Logs confirm static recovery probes, proof rejections, and no real-device world_account_context_detected/world_app_state_init_sent/world_proof_ready/world_proof_created evidence yet."
+    },
+    {
+      "at": "2026-06-01T04:05:44Z",
+      "event": "passive_world_app_runtime_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the app-owned native init/state handshake from the account-context runtime so VeriPost passively reads existing World App/MiniKit/account-provider state and waits in-app without sending init, wallet-auth, sign, verify, connector, or redirect commands. Focused passive-runtime tests, pnpm typecheck, pnpm verify with 20 Vitest files, 172 Vitest tests, and 7 GOALS contract tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_GauEfPUyz8417yEiHioSpfpFFa1B to https://veripost.io. Production probes confirmed root marker/header, config/health, /api/world-proof/request 404, static stale auth and /world-miniapp recovery, service-worker kill-switch headers/body, fake account-context rejection with world_address_unverified, stale worldIdProof rejection with invalid_request, browser asset presence for account-context wait/proof markers, browser asset absence for world_app_state_init_sent, command:\\\"init\\\", old native IDKit/request/auth/wallet/connector markers, and redacted logs for passive runtime diagnostics with worldAppInit.attempted:false, fake-proof rejection, stale payload rejection, legacy_auth_entrypoint_blocked, and legacy_miniapp_shell_entrypoint_blocked. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T04:14:33Z",
+      "event": "no_auto_auth_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed automatic meta-refresh navigation from stale auth and mini app shell static recovery pages and tightened their CSP to navigate-to 'self'; form-action 'none'. Focused middleware/GOALS tests, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_DpQjgbNMMPBQrm8xB4GfzMKr1kxu to https://veripost.io. Production probes confirmed root marker/header, config/health, /api/world-proof/request 404, stale /api/auth/signin/twitter and /world-miniapp recovery with no Location, no rewrite, no meta refresh, no leaked auth targets, strict same-origin CSP, and only same-origin continue links; fake account-context rejection with world_address_unverified; stale worldIdProof rejection with invalid_request; browser asset absence for old native/auth/init markers; and redacted logs for the stale auth/miniapp probes and proof rejections. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T04:27:37Z",
+      "event": "init_only_world_app_state_request_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored a narrow SDK-compatible World App init state request when account context is missing after config loads, without importing MiniKit, creating or replacing window.MiniKit, or sending wallet-auth, sign, verify, open-url, connector, or redirect commands. Focused runtime/compose/GOALS tests, pnpm typecheck, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_6pbD3KUnMqGRs5vKxESzKUEPDBYn to https://veripost.io. Production probes confirmed root marker/header, config/health, manifest screenshot copy, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, stale worldIdProof rejection with invalid_request, static stale auth and /world-miniapp recovery with no Location/meta/OAuth leakage, bundle presence for world_app_state_init_sent and command:\"init\", bundle absence for MiniKit/IDKit SDK imports, auth/sign/verify/open-url native commands, connector markers, /api/world-proof/request, and wallet permission requests. Logs show synthetic world_app_state_init_sent plus fake-proof, stale-payload, legacy_auth_entrypoint_blocked, and legacy_miniapp_shell_entrypoint_blocked probe events; real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T04:35:18Z",
+      "event": "world_app_stale_entrypoint_app_rewrite_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed real World App stale document entrypoints from static recovery to internal compose-app rewrites while keeping non-World-App stale probes on static same-origin recovery. Focused middleware/GOALS tests, pnpm typecheck, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_DDCzcJ8XqsG1ktiU171oMUW6JL41 to https://veripost.io. Production probes confirmed World App user-agent requests to /api/auth/signin/twitter and /world-miniapp return compose-app HTML with x-veripost-legacy-recovery: app-rewrite, no Location, no static recovery page, no meta refresh, and no stale OAuth target leakage; non-World-App probes still return static recovery. Logs show synthetic world_app_state_init_sent, fake-proof world_proof_rejected, World App user-agent legacy_auth_entrypoint_blocked and legacy_miniapp_shell_entrypoint_blocked, and same-origin world_page_request entries for the app rewrites; real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T04:44:00Z",
+      "event": "post_late_world_app_detection_prepared",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the early World App detection requirement from Post enablement. Once config and text are valid, Post now starts the same in-place account-context wait; if World App injects account context after the tap, proof creation can proceed without World universal links, auth routes, wallet-auth, sign, verify, connector, or redirect commands. Focused compose/GOALS tests passed. Full verification, deployment, production probes, and real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remain pending for this patch."
+    },
+    {
+      "at": "2026-06-01T04:44:53Z",
+      "event": "post_late_world_app_detection_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm typecheck, pnpm verify with 173 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check for the late-detection Post wait patch. Deployed dpl_A5upJUSvDbdc3z23Qk9ngGUjwcpb to https://veripost.io. Production probes confirmed the new root marker, config/health, World App stale-entrypoint app rewrites, non-World-App static recovery, late-wait UI markers in browser assets, fake account-context rejection with world_address_unverified, and bundle absence for MiniKit/IDKit SDK imports, wallet-auth calls, connector markers, World universal-link code, /api/world-proof/request, and wallet permission requests. Logs show probe stale-entrypoint traps, app-rewrite page requests, and fake-proof rejection; real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T04:52:00Z",
+      "event": "official_minikit_init_only_prepared",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored official @worldcoin/minikit-js initialization only for MiniKit.install(appId) account-state hydration when the real browser window.WorldApp payload is present, while preserving the raw init message as the bridge-only fallback. The active Post path still does not call wallet-auth, sign, verify, connector, wallet permission, X login, IDKit, or World universal-link navigation. Focused runtime/compose/GOALS tests passed. Full verification, deployment, production probes, and real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remain pending."
+    },
+    {
+      "at": "2026-06-01T05:02:31Z",
+      "event": "official_minikit_init_only_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed pnpm typecheck, pnpm verify with 174 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check for the official MiniKit init-only account-state hydration patch. Deployed dpl_H937nugDGBtKG6Pp527d5iwLx1tW to https://veripost.io. Production probes confirmed root marker/header, config/health, /api/world-proof/request 404, World App stale-entrypoint app rewrites, non-World-App static recovery, fake account-context rejection with world_address_unverified, stale native payload rejection with invalid_request, browser asset presence for world_app_state_init_sent, command:\"init\", MiniKit.install, and late-wait markers, plus source absence for active IDKit/wallet-auth/sign/connector/X-login/old proof-route calls. Logs show synthetic world_app_state_init_sent with worldAppInit.stateContainer:\"created\", fake-proof rejection, stale native payload rejection, stale-entrypoint traps, and app-rewrite page requests. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T05:13:05Z",
+      "event": "startup_minikit_trigger_observer_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Refreshed official MiniKit state from the current window.WorldApp payload at startup, added passive MiniKit.trigger payload account-context capture, and ignored stale passive/MiniKit account state when the current World App surface changes or disappears. Focused runtime/compose/GOALS tests passed; pnpm verify passed with 175 Vitest tests plus 7 GOALS contract tests; pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_81zbyPNa3FnoRAQWMrNBoL2wJ2HT to https://veripost.io. Production probes confirmed root marker/header, config/health, /api/world-proof/request 404, World App stale-entrypoint app rewrites, non-World-App static recovery, fake account-context rejection with world_address_unverified, stale native payload rejection with invalid_request, browser asset presence for world_app_state_init_sent, command:\"init\", MiniKit.install, and late-wait markers, plus source absence for active IDKit/wallet-auth/sign/connector/X-login/old proof-route calls. Logs show synthetic world_app_state_init_sent with worldAppInit.stateContainer:\"created\" and attempts:2, fake-proof rejection, stale native payload rejection, stale-entrypoint traps, and app-rewrite page requests. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T05:24:30Z",
+      "event": "passive_minikit_response_events_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added passive capture for official MiniKit miniapp-* response events, accepted World custom-scheme passive message origins only inside a World App surface, and preserved an early passive account payload when a walletless window.WorldApp payload appears immediately afterward. Focused runtime/compose/GOALS tests passed with 74 focused tests; pnpm typecheck passed; pnpm verify passed with 178 Vitest tests plus 7 GOALS contract tests; pnpm audit --audit-level moderate passed. Deployed dpl_8QRa9cTKbMmkDnijwAaMTMMdrtnx to https://veripost.io. Production probes confirmed root marker/header, config/health, /api/world-proof/request 404, World App stale-auth app rewrite with no Location/static/meta/OAuth leakage, fake account-context rejection with world_address_unverified, stale native payload rejection with invalid_request, browser asset presence for passive MiniKit response event markers, world_app_state_init_sent, command:\"init\", MiniKit.install, and late-wait markers, plus source absence for active IDKit/wallet-auth/sign/connector/X-login/old proof-route calls. Logs show synthetic world_app_state_init_sent with worldAppInit.stateContainer:\"created\" and attempts:2, fake-proof rejection, stale native payload rejection, stale-auth trap, and same-origin world_page_request app-rewrite entry. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T05:33:20Z",
+      "event": "early_stale_entrypoint_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added head-installed early stale-location recovery for auth, mini app shell, root-query, and hash handoff URLs, and changed World App stale-entrypoint app rewrites to target the clean root app shell instead of legacy query markers. Focused middleware/early-guard/compose/GOALS tests passed; pnpm typecheck passed; pnpm verify passed with 180 Vitest tests plus 7 GOALS contract tests; pnpm audit --audit-level moderate passed. Deployed dpl_DVkFmusevLQ4nFWSbKGSSTgy16AT to https://veripost.io. Production probes confirmed root marker/header, /api/world-proof/request 404, World App stale auth app rewrite with no Location/static/meta/OAuth leakage, early recovery markers in browser assets, non-World-App static recovery linking only to /, fake account-context rejection with world_address_unverified, and no restored active IDKit/wallet-auth/sign/connector/X-login/old proof-route calls. Logs show fake-proof rejection, synthetic early recovery diagnostic, stale-auth trap, and same-origin world_page_request app-rewrite entries. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T05:42:07Z",
+      "event": "world_app_stale_auth_post_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Extended stale recovery so no-query World App /api/auth/signin/twitter GET and POST requests hydrate the compose app, while query-bearing stale auth/root handoffs use same-origin static-auto recovery back to / without embedding callback/OAuth target values. Focused middleware/early-guard/compose/GOALS tests passed with 46 focused tests; pnpm typecheck passed; pnpm verify passed with 181 Vitest tests plus 7 GOALS contract tests; pnpm audit --audit-level moderate passed. Deployed dpl_5FDJEZBpQZuJK83s7QipKvp9seHj to https://veripost.io. Production probes confirmed root marker/header, /api/world-proof/request 404, no-query World App stale auth GET/POST app rewrite, query-bearing stale auth/root static-auto recovery with no target leakage, non-World-App manual static recovery, fake account-context rejection with world_address_unverified, and no restored active IDKit/wallet-auth/sign/connector/X-login/old proof-route calls. Logs show fake-proof rejection, World App stale auth GET/POST traps, query-bearing root handoff trap, and same-origin world_page_request app-rewrite entries. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T05:55:43Z",
+      "event": "world_app_stale_handoff_copy_token_cleanup_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed remaining authentication wording from stale recovery pages and changed client/early guard token construction so production root/app-shell HTML no longer ships raw stale handoff tokens such as callbackUrl, redirect_uri, worldapp:, or worldcoin.org while preserving runtime blocking behavior. Focused guard/runtime tests passed with 100 tests; pnpm verify passed with 181 Vitest tests plus 7 GOALS contract tests; pnpm audit --audit-level moderate and git diff --check passed. Deployed dpl_2Skx6U9C95JkGyEucWfGJtHBoFir to https://veripost.io. Production probes confirmed clean root/app-shell body scans, no-query World App stale auth POST app rewrite, query-bearing stale auth/root static-auto recovery with no target leakage or authentication wording, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, and logs for fake-proof rejection, stale auth/root traps, removed stale route trap, and same-origin world_page_request app-rewrite entries. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T06:08:11Z",
+      "event": "world_app_static_fetch_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Replaced query-bearing World App stale auth/root static-auto recovery with sanitized same-origin static-fetch recovery that uses history.replaceState to clean the visible URL and fetches the clean root app shell without top-level window.location.replace or callback/OAuth target serialization. Updated manifest/root copy to say no separate sign-in. Focused middleware/early-guard/compose/GOALS tests passed with 46 focused tests; pnpm typecheck, pnpm verify with 181 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, and git diff --check passed. Deployed dpl_DqV43up7nsukgbpxyfHcq8xSHGGh to https://veripost.io. Production probes confirmed root marker/header, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, no-query World App stale auth POST app rewrite, query-bearing stale auth/root static-fetch recovery with no target leakage/authentication wording/window.location.replace/static-auto marker, non-World-App static recovery, and clean root/app-shell body scans. Logs show fake-proof rejection, World App stale auth POST traps, query-bearing root handoff trap, removed stale route trap, and same-origin world_page_request app-rewrite entries. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T06:23:03Z",
+      "event": "world_app_passive_only_no_bridge_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed @worldcoin/minikit-js, MiniKit.install, raw command:init bridge messages, world_app_state_init_sent diagnostics, host MiniKit mutation, and app-owned native postMessage senders from the active World App account-context proof runtime. Focused world-app-runtime/compose/runtime-diagnostics/GOALS tests passed with 82 tests; pnpm typecheck, pnpm verify with 180 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, and git diff --check passed. Deployed dpl_4nbVpVT79qXCjN9QRVFy16PLopn1 to https://veripost.io. Production probes confirmed root marker/header, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, no-query World App stale auth app rewrite, query-bearing stale auth/root static-fetch recovery, absence of MiniKit.install/command:init/world_app_state_init_sent/app-owned bridge sender markers in active production source/assets, and logs for fake-proof rejection, stale auth trap, removed stale route probe, and page requests. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T06:36:04Z",
+      "event": "official_minikit_install_only_redeployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Reinstated official @worldcoin/minikit-js initialization only for MiniKit.install(appId) account-state hydration when the real browser window.WorldApp payload is present, while keeping wallet-auth, sign, verify, IDKit, connector, wallet permission, X login, World universal-link navigation, /api/world-proof/request, and app-owned native bridge senders out of the active Post path. Focused runtime/compose/GOALS tests passed with 73 tests; pnpm typecheck, pnpm verify with 180 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_7xuSakPzE3r9WnAtPB4B53zwmXxr to https://veripost.io. Production probes confirmed root marker/header, config/health, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, no-query World App stale auth app rewrites, query-bearing stale auth/root static-fetch recovery, official MiniKit install/init markers present in browser assets, active auth/sign/verify/IDKit/connector/X-login/old proof-route call sites absent from the active compose/proof path, and logs for fake-proof rejection, stale auth traps, removed stale route probe, and page requests. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T06:43:18Z",
+      "event": "official_minikit_missing_account_fallback_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Narrowed official MiniKit.install(appId) so it only runs as a missing-account hydration fallback in a real World App surface; already exposed World App/MiniKit/account-provider account context is used directly without MiniKit init. Focused runtime/compose/GOALS tests passed with 73 tests; pnpm typecheck, pnpm verify with 180 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_9qVgFNETK9xTM15uryoRVeqFaa5R to https://veripost.io. Production probes confirmed root marker/header, config/health, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, stale-entrypoint app-rewrite/static-fetch recovery, official MiniKit install/init markers still present in browser assets for fallback support, active auth/sign/verify/IDKit/connector/X-login/old proof-route call sites absent from the active compose/proof path, and logs for fake-proof rejection, stale auth traps, removed stale route probe, and page requests. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T06:52:06Z",
+      "event": "passive_no_init_account_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed the remaining @worldcoin/minikit-js dependency and official MiniKit.install(appId) fallback so the active account-context runtime is passive-only again: it reads already exposed World App/MiniKit/account-provider state and passive account-context messages, but sends no native command:init and emits no world_app_state_init_sent. Focused runtime/compose/GOALS tests passed with 73 tests; pnpm typecheck, pnpm verify with 180 Vitest tests plus 7 GOALS contract tests, and pnpm audit --audit-level moderate passed. Deployed dpl_BAvFT4PsaJjgwR33vXPdCS3fjtCk to https://veripost.io. Production probes confirmed root marker/header, config/health, /api/world-proof/request 404, fake account-context rejection with world_address_unverified, stale-entrypoint app-rewrite/static-fetch recovery, account-context/wait/proof markers present, and @worldcoin/minikit-js, MiniKit.install, command:init, world_app_state_init_sent, active auth/sign/verify/IDKit/connector/X-login/old proof-route call sites, and app-owned native bridge senders absent from browser assets/source. Logs show fake-proof rejection, stale auth/miniapp shell traps, and page requests; no real-device world_account_context_detected/world_proof_ready/world_proof_created evidence yet. Spectacula validation, JSON validation, and git diff --check passed after documentation updates."
+    },
+    {
+      "at": "2026-06-01T06:58:21Z",
+      "event": "sparse_world_app_launch_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed legacy auth and mini app shell recovery so World App user-agent requests with sparse webview headers such as Accept */* plus sec-fetch-mode:cors recover into the clean root compose app instead of receiving JSON 410; explicit JSON stale-auth calls still fail closed. Focused middleware/GOALS tests passed with 26 tests; pnpm typecheck, pnpm verify with 181 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_5RFv7PMXgCAk9m3JtHRg2w1JgGhm to https://veripost.io. Production probes confirmed sparse World App stale auth and /world-miniapp requests now return 200 compose-app HTML with x-veripost-legacy-recovery: app-rewrite and no Location, explicit JSON stale-auth returns 410, query-bearing stale auth still uses static-fetch recovery without target leakage, bundle/source remain free of @worldcoin/minikit-js, MiniKit.install, command:init, world_app_state_init_sent, active auth/sign/verify/IDKit/connector/X-login/old proof-route markers, and fake account-context proof still rejects at Address Book verification. Real-device world_account_context_detected/world_proof_ready/world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T07:17:46Z",
+      "event": "native_wallet_auth_confirmation_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored official in-app MiniKit install and walletAuth with inline-only fallback, added signed /api/world-wallet-auth/nonce challenges and server SIWE/domain/chain/draft verification before Address Book storage, allowed the new nonce route through middleware while keeping legacy auth traps, passed pnpm verify with 182 tests plus 7 GOALS, audit, Spectacula validation, JSON validation, and git diff --check, deployed dpl_8MFeKkvcsft1jfo2Z57mmuhHAzsk to https://veripost.io, and confirmed production nonce JSON/secure cookie, signed fake-proof Address Book rejection, bundle marker/absence scans, stale launch recovery, and redacted logs. Real-device proof-created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T07:36:07Z",
+      "event": "wallet_auth_removed_account_context_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed MiniKit.walletAuth and /api/world-wallet-auth/nonce from the active Post flow after the World App authentication step still risked leaving the mini app, returned proof creation to initialized World App account context plus Address Book verification, trapped stale wallet-auth nonce calls with same-origin 410 recovery, passed pnpm verify with 182 tests plus 7 GOALS, audit, Spectacula validation, JSON validation, and git diff --check, deployed dpl_BtZKDfowG6vW1JUXpgkToYdHgerm to https://veripost.io, and confirmed production route list has no wallet-auth nonce route, stale wallet-auth nonce returns 410, fake account-context proof reaches Address Book rejection, stale launch recovery stays in-app, config/health are healthy, and redacted logs contain only probe rejections/traps. Real-device proof-created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T07:50:12Z",
+      "event": "minikit_sdk_removed_raw_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Removed @worldcoin/minikit-js and MiniKit.install from the active account-context runtime so the shipped app no longer includes SDK wallet-auth/sign implementations, kept only passive World App/host MiniKit/provider account reads plus a non-auth command:init state request when account context is missing, tightened stale /api/world-wallet-auth/nonce JSON posts with sparse Accept headers to return same-origin 410, passed pnpm verify with 183 tests plus 7 GOALS, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check, deployed dpl_DiEvBPfskBtnHKfbBoFW6YwTfzT6 to https://veripost.io, and confirmed production root marker/header, no SDK/walletAuth/sign markers in loaded assets, stale wallet-auth JSON nonce 410, fake account-context proof reaches Address Book rejection, stale launch recovery stays in-app, config/health are healthy, and redacted logs contain probe rejection/trap entries only. Real-device proof-created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T08:00:00Z",
+      "event": "bridge_first_raw_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Broadened the no-SDK account-state fallback so a real World App native bridge plus World App user-agent can receive the non-auth command:init request before window.WorldApp is populated, preserved the no-message behavior for generic bridge-only pages, passed focused runtime/compose/GOALS tests with 76 tests, focused middleware/GOALS tests with 28 tests, pnpm typecheck, pnpm verify with 184 tests plus 7 GOALS, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check, deployed dpl_GbS3xhF7vMFmax3HQPx3BCvpshfT to https://veripost.io, and confirmed production root marker/header, no SDK/walletAuth/sign command markers in loaded external app assets, stale wallet-auth JSON nonce 410, fake account-context proof reaches Address Book rejection, stale launch recovery stays in-app, config/health are healthy, and redacted logs contain page/stale-route/proof-rejection probe entries. Real-device proof-created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T08:12:00Z",
+      "event": "bounded_raw_init_retry_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added bounded no-auth command:init retries while World App account context remains missing, including retry after initially missing native transport appears, capped at five one-second attempts per app id and still gated away from generic bridge-only pages. Passed focused runtime/GOALS tests with 68 tests, focused compose/middleware tests with 31 tests, pnpm typecheck, pnpm verify with 186 tests plus 7 GOALS, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check. Deployed dpl_Dv2i5EAvwvJJYUUcEbcwPi1pqpwU to https://veripost.io and confirmed production root marker/header, no SDK/walletAuth/sign command markers in loaded external app assets, stale wallet-auth JSON nonce 410, fake account-context proof reaches Address Book rejection, stale auth recovery stays in-app, config/health are healthy, and redacted logs contain page/stale-route/proof-rejection probe entries. A 24-hour production log scan with --no-branch still found no real-device world_account_context_detected, world_proof_ready, or world_proof_created evidence."
+    },
+    {
+      "at": "2026-06-01T08:24:00Z",
+      "event": "address_array_passive_capture_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added direct/nested addresses array capture and array-wrapped passive account-message capture to the no-auth account-context runtime. Passed focused runtime tests with 63 tests, GOALS with 7 tests, pnpm typecheck, pnpm lint, pnpm test with 188 tests, pnpm build, pnpm verify, pnpm audit --audit-level moderate, and git diff --check. Deployed dpl_Gr2yYE7EBVA9bze1uDdE1jBDuVci to https://veripost.io and confirmed production root marker/header, sparse wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, stale auth recovery stays in-app, bundle markers for account-context/address-array/init paths, forbidden auth/sign/IDKit/connector markers absent, and redacted logs contain only probe entries. Real-device world_account_context_detected, world_proof_ready, and world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T08:30:00Z",
+      "event": "pending_account_context_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added low-noise redacted world_account_context_pending diagnostics when a World App surface is present but account context is still missing, keyed by runtime shape/init state so short device attempts can expose host state before timeout. Passed focused diagnostics/GOALS tests, focused compose diagnostics tests, pnpm typecheck, pnpm lint, pnpm test with 188 tests, pnpm build, pnpm verify, pnpm audit --audit-level moderate, Spectacula validation, and git diff --check. Deployed dpl_7QSi2N226vo5UYbwEEKN9WfDbRG6 to https://veripost.io and confirmed production root marker/header, sparse wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, stale auth recovery stays in-app, pending diagnostic endpoint acceptance/logging, bundle markers present, forbidden auth/sign/IDKit/connector markers absent, and redacted logs contain only probe entries. Real-device world_account_context_detected, world_proof_ready, and world_proof_created evidence remains pending."
+    },
+    {
+      "at": "2026-06-01T08:37:14Z",
+      "event": "static_fetch_all_world_app_stale_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Changed all World App stale auth and exact mini app shell document recovery from Next app rewrites to sanitized same-origin static-fetch recovery, preventing stale /api/auth/signin/twitter route state from hydrating in the app shell. Passed focused middleware/GOALS tests, pnpm typecheck, pnpm verify with 188 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check. Deployed dpl_2vAbszzioueiyKR1oMEV66i9EEKr to https://veripost.io and confirmed root marker/header, static-fetch recovery headers/body for stale auth and /world-miniapp sparse World App launches, sparse wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, browser bundle account-context markers present, forbidden auth/sign/IDKit/connector markers absent, and a 6-hour production log summary still has zero real-device world_account_context_detected, world_proof_ready, or world_proof_created entries."
+    },
+    {
+      "at": "2026-06-01T08:50:43Z",
+      "event": "official_minikit_account_state_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Restored official @worldcoin/minikit-js initialization only for MiniKit.install(appId) account-state hydration when window.WorldApp is present, while keeping MiniKit.walletAuth, wallet-auth nonce routes, sign commands, IDKit, connector/fallback wallet, X login, app-owned redirects, and /api/world-proof/request out of the active Post path. Focused runtime/GOALS tests passed with 70 tests, focused compose/proof/runtime-diagnostics tests passed with 23 tests, pnpm typecheck, pnpm verify with 188 Vitest tests plus 7 GOALS contract tests, and pnpm audit --audit-level moderate passed. Deployed dpl_EZbfqRjQKorPPuB46vYosWPGV8Gi to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config/health readiness, /api/world-proof/request 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, stale auth and exact mini app shell static-fetch recovery with no Location, no middleware rewrite, no callback/OAuth leakage, no window.location.replace, and no app-rewrite marker, browser bundle account-context/official-init markers present, and app-owned auth/sign/IDKit/connector/X-login/old proof-route call sites absent. Current deployment logs contain only probe page/stale-route/proof-rejection entries and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T09:02:23Z",
+      "event": "early_official_minikit_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Moved official MiniKit account-state hydration earlier so startup can call MiniKit.install() as soon as window.WorldApp is present before /api/config returns, then call MiniKit.install(appId) again after config is available, while still keeping MiniKit.walletAuth, wallet-auth nonce routes, sign commands, IDKit, connector/fallback wallet, X login, app-owned redirects, and /api/world-proof/request out of the active Post path. Focused runtime/GOALS tests passed with 71 tests, focused compose/proof/runtime-diagnostics/middleware tests passed with 44 tests, pnpm typecheck passed, pnpm verify passed with 189 Vitest tests plus 7 GOALS contract tests, and pnpm audit --audit-level moderate passed. Deployed dpl_GJiKwQeV8TjBxHJSnf6LNa9LfJiK to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health healthy on retry after one transient immediately-after-deploy storage 503, /api/world-proof/request 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, stale auth GET/POST and exact mini app shell static-fetch recovery with no Location, no middleware rewrite, no callback/OAuth leakage, no window.location.replace, and no app-rewrite marker, browser bundle startup official-init markers present, and app-owned auth/sign/IDKit/connector/X-login/old proof-route call sites absent. Current deployment logs contain only probe page/stale-route/proof-rejection entries and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T09:12:09Z",
+      "event": "configured_startup_minikit_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Passed configured NEXT_PUBLIC_WORLD_APP_ID into startup MiniKit.install via primeWorldAppRuntime(BUILD_TIME_WORLD_APP_ID) so production startup initializes official MiniKit account state with app_dc56f8eecb48c4d395981ec1ca5c6329 before /api/config returns when window.WorldApp is present, while still keeping MiniKit.walletAuth, wallet-auth nonce routes, sign commands, IDKit, connector/fallback wallet, X login, app-owned redirects, and /api/world-proof/request out of the active Post path. Focused runtime/GOALS/compose tests passed with 79 tests, pnpm verify passed with 189 Vitest tests plus 7 GOALS contract tests, and pnpm audit --audit-level moderate passed. Deployed dpl_4cDuKLQBVZ65QkgNZ4oiwH84NCci to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health healthy on three consecutive probes, /api/world-proof/request 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, stale auth GET/POST and exact mini app shell static-fetch recovery with no Location, no middleware rewrite, no callback/OAuth leakage, no window.location.replace, and no app-rewrite marker, browser bundle configured-startup official-init markers including the app id literal present, and app-owned auth/sign/IDKit/connector/X-login/old proof-route call sites absent. Current deployment logs contain probe page/stale-route/proof-rejection entries and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T09:21:23Z",
+      "event": "bridge_first_minikit_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Allowed configured startup account-state init to send the non-auth command:init request when strong MiniKit/WorldApp native bridge evidence exists before window.WorldApp or a World App user-agent appears, while keeping generic ReactNative-style bridges passive and keeping MiniKit.walletAuth, wallet-auth nonce routes, sign commands, IDKit, connector/fallback wallet, X login, app-owned redirects, and /api/world-proof/request out of the active Post path. Focused runtime/GOALS/compose tests passed with 81 tests, pnpm verify passed with 191 Vitest tests plus 7 GOALS contract tests, and pnpm audit --audit-level moderate passed. Deployed dpl_XmTSAVf4mZD6GmhrhJWUk4qYkTh9 to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health healthy on three consecutive probes, /api/world-proof/request 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, stale auth GET/POST and exact mini app shell static-fetch recovery with no Location, no middleware rewrite, no callback/OAuth leakage, no window.location.replace, and no app-rewrite marker, browser bundle configured-startup and bridge-first init markers including the app id literal present, and app-owned auth/sign/IDKit/connector/X-login/old proof-route call sites absent. Current deployment logs contain probe page/stale-route/proof-rejection entries and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T09:31:51Z",
+      "event": "root_handoff_alias_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded stale root-query and hash handoff detection to cover additional redirect aliases including callback, redirect_to, returnUrl, continue, target, destinationUrl, and state while preserving safe same-origin /proof targets and explicit post-proof X/Twitter tweet intents. Focused guard/proxy/compose/GOALS tests passed with 62 tests; pnpm typecheck, pnpm verify with 191 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, and git diff --check passed. Deployed dpl_BpjQNi44Gose45DsqZnzPmMDX8v5 to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health healthy on three consecutive probes, /api/world-proof/request 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, root aliases returnUrl/redirect_to/continue/target/destinationUrl/state static-fetch recovery with no Location, no middleware rewrite, no target leakage, no window.location.replace, and no app-rewrite marker, safe tweet-intent target not trapped, browser bundle configured-startup and bridge-first init markers including the app id literal present, and app-owned auth/sign/IDKit/connector/X-login/old proof-route call sites absent. Current deployment logs contain probe page/stale-route/proof-rejection entries and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T09:40:29Z",
+      "event": "unknown_root_handoff_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded stale root-query and hash handoff detection beyond named aliases: unknown query keys are now inspected when their values look like URL/path handoffs to stale same-origin auth paths, World deep links, World verifier/mini-app URLs, X OAuth, or other off-origin non-tweet targets, while safe non-URL values, same-origin /proof targets, and explicit X/Twitter tweet intents remain allowed. Focused guard/proxy/compose/GOALS tests passed with 62 tests; pnpm typecheck, pnpm verify with 191 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, and git diff --check passed. Deployed dpl_D4W32DwYuf8vUe6st8vNDgAA7rFn to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health healthy on three consecutive probes, /api/world-proof/request 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, unknown root handoffs oauth_callback/deep_link/fallback/launch static-fetch recovery with no Location, no middleware rewrite, no target leakage, no window.location.replace, and no app-rewrite marker, safe note/world and tweet-intent URL values not trapped, browser bundle configured-startup and bridge-first init markers including the app id literal present, and app-owned auth/sign/IDKit/connector/X-login/old proof-route call sites absent. Current deployment logs contain probe page/stale-route/proof-rejection entries and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T09:49:50Z",
+      "event": "keepalive_runtime_diagnostics_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added keepalive:true to the hydrated /api/runtime-diagnostics fetch fallback so pagehide/hidden-webview diagnostics have the same unload-safe delivery path as the early navigation guard when sendBeacon is unavailable. Focused compose/GOALS tests passed with 15 tests, focused guard/proxy/compose/GOALS tests passed with 62 tests, pnpm typecheck, pnpm verify with 191 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate, and git diff --check passed. Deployed dpl_gxUMmgbPoFqxDwtD1mxwnTsTNYkA to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health healthy on three consecutive probes, /api/world-proof/request 404, fake account-context proof reaches Address Book rejection, unknown root handoffs oauth_callback/deep_link static-fetch recovery with no Location/no middleware rewrite/no target leakage/no window.location.replace/no app-rewrite marker, safe note=world not trapped, browser bundle account-context/init/runtime-diagnostics/keepalive markers present, and app-owned auth/sign/IDKit/connector/X-login/old proof-route call sites absent. Current deployment logs contain synthetic world_runtime_pagehide and fake-proof rejection for runtime-prod-keepalive-probe, stale handoff traps, page requests, and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T10:00:14Z",
+      "event": "relative_schemeless_root_handoff_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded unknown root-query and hash handoff recovery to catch relative auth paths such as fallback=api/auth/signin/twitter, schemeless host values such as oauth_callback=x.com/i/oauth2/authorize and launch=world.org/mini-app, and relative oauth2/authorize paths, while keeping bare note=world and schemeless X/Twitter tweet intents allowed. Focused guard/proxy/compose/GOALS tests passed with 62 tests, pnpm verify passed with 191 Vitest tests plus 7 GOALS contract tests, pnpm audit --audit-level moderate and git diff --check passed. Deployed dpl_4RdiM6uZHDFE25yHFpbX614Abffv to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health healthy on three consecutive probes, /api/world-proof/request 404, fake account-context proof reaches Address Book rejection, relative/schemeless unknown root handoffs fallback/oauth_callback/launch/oauth_path static-fetch recovery with no Location/no middleware rewrite/no target leakage/no window.location.replace/no app-rewrite marker, safe note=world and schemeless tweet-intent values not trapped, browser bundle account-context/init/runtime-diagnostics/keepalive/relative-handoff markers present, and app-owned auth/sign/IDKit/connector/X-login/old proof-route call sites absent. Current deployment logs contain fake-proof rejection for runtime-prod-relative-handoff-probe, stale handoff traps, page requests, and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T10:08:45Z",
+      "event": "bare_hash_handoff_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded client-side hash handoff recovery so bare key=value fragments such as #fallback=api/auth/signin/twitter and #oauth_callback=x.com/i/oauth2/authorize are evaluated as root query handoffs before nested OAuth query strings can mask the stale auth target, while safe #note=world remains allowed. Focused guard/compose tests passed with 34 tests and pnpm verify passed with lint, typecheck, 191 Vitest tests, 7 GOALS contract tests, and build. Deployed dpl_gbynFWsvj3DAnAhZ7Hepgaweht2a to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health healthy on three consecutive probes, fake account-context proof reaches Address Book rejection, root query handoffs fallback/oauth_callback/launch still recover with static-fetch and no target leakage, production-shipped inline early guard cleans the bare hash fallback/oauth_callback handoff to /?debug=world with one redacted recovery diagnostic, safe #note=world is not trapped, and current deployment logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T10:23:03Z",
+      "event": "history_hash_mutation_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Expanded early and hydrated navigation guards to block stale history.pushState / history.replaceState handoffs and recover direct hashchange/popstate stale handoffs after load, including bare key=value fragments on /proof/* paths while preserving safe proof paths. Focused guard/compose tests passed with 38 tests, pnpm verify passed with 195 Vitest tests plus 7 GOALS, audit, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_W9ZgdA1zawb5B4szrN2tUDKo3Dy6 to https://veripost.io and confirmed root marker/header/no-store/Clear-Site-Data, config readiness, health, fake account-context proof reaches Address Book rejection, document-shaped fallback/oauth_callback/launch/oauth_path static-fetch recovery with no target leakage, production-shipped inline early guard history/hashchange behavior, and current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T10:31:23Z",
+      "event": "service_worker_stale_url_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Updated public/sw.js and public/service-worker.js so activation cleanup navigates controlled clients through getRecoveryUrl(client.url), sending legacy auth paths, stale root handoff queries, and stale hash handoffs to / while preserving safe /proof/* URLs. pnpm verify passed with 195 Vitest tests plus 7 GOALS, pnpm audit --audit-level moderate passed, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_FWyv1GU6py6wq2UWtacZ4obWZkF5 to https://veripost.io and confirmed root marker/header, config/health, service-worker headers/body, live VM service-worker recovery behavior, fake account-context proof reaches Address Book rejection, and current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T10:40:33Z",
+      "event": "world_app_bridge_fallback_init_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Updated World App runtime account-state hydration so official MiniKit.install remains the first path, but if account context is still missing and official MiniKit did not post to the actual native transport, the bounded non-auth command:init fallback is sent to alternate iOS handler casing or Android-with-webkit bridges. Focused runtime/compose/GOALS tests passed with 83 tests; pnpm verify passed with 197 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_48SZx2ZHv57d6kASU11pMnPY5xj7 to https://veripost.io and confirmed root marker/header, config/health, service-worker headers/body, fake account-context proof reaches Address Book rejection, bundle account-context/init bridge markers, and current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T10:51:13Z",
+      "event": "minikit_command_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added fail-closed guards for redirect-capable MiniKit command methods exposed after state-only MiniKit initialization or on existing host MiniKit stubs, with redacted minikit-command=blocked diagnostics. Focused runtime/compose/diagnostics tests passed with 87 tests; pnpm verify passed with 199 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_2E1K7nmEcLXqHF9P9kSyiR4gN2x6 to https://veripost.io and confirmed root marker/header, config/health, service-worker headers/body, fake account-context proof reaches Address Book rejection, bundle command-guard/account-context/init markers, accepted synthetic command-guard diagnostic, and current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T11:01:41Z",
+      "event": "native_bridge_command_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added fail-closed guards for direct native bridge command payloads on real World App surfaces, allowing the non-auth command:init account-state request while dropping stale wallet-auth/sign/open-url payloads with redacted native-command=blocked diagnostics. Focused runtime/compose/diagnostics/GOALS tests passed with 96 tests; pnpm verify passed with 201 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_12hFexEcedCokS9sRX1U73babUmc to https://veripost.io and confirmed root marker/header, config/health, removed proof route 404, stale wallet-auth nonce 410, service-worker headers/body, fake account-context proof reaches Address Book rejection, bundle native-command/account-context/init markers, accepted synthetic native-command=blocked diagnostic, and current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T11:12:26Z",
+      "event": "early_native_bridge_command_guard_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added the direct native bridge command guard to the head-installed early navigation guard so stale pre-hydration native postMessage command payloads are dropped before React loads, while the non-auth command:init account-state request still passes. Focused early-guard/runtime/compose/diagnostics/GOALS tests passed with 113 tests; pnpm verify passed with 203 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate, git diff --check, Spectacula validation, and JSON validation passed. Deployed dpl_uL7c8nuYn4w3hqeCYN1qarwecaqS to https://veripost.io and confirmed root marker/header, config/health, removed proof route 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, bundle/root markers early_native_command, native-command=blocked, veripost:native-command-blocked, and veripost.native-post-message-guarded, production-shipped inline early guard passes command:init and drops command:verify, accepted synthetic early-native-command=blocked diagnostic, and current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T11:19:42Z",
+      "event": "late_native_bridge_guard_refresh_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a brief startup refresh to the head-installed native bridge command guard so native postMessage targets injected after the initial head script are still wrapped before stale pre-hydration handlers can call wallet-auth/sign/open-url commands. Focused early-guard/runtime/compose/diagnostics/GOALS tests passed with 114 tests; pnpm verify passed with 204 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_6kDVM67tLQNBziW6StvLXgTf8Cg2 to https://veripost.io and confirmed root marker/header, config/health, removed proof route 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, production-shipped inline early guard passes command:init and drops command:wallet-auth from a late-injected native bridge, bundle/root markers early_native_command, native-command=blocked, veripost:native-command-blocked, and veripost.native-post-message-guarded, and current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T11:31:31Z",
+      "event": "root_launch_query_evidence_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added redacted root-launch query logging and auth-trigger root-query recovery for bare/empty stale auth keys such as ?auth and ?walletAuth= while preserving clean ?path=/ launches. Focused tests passed with 71 tests; pnpm verify passed with 206 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate and git diff --check passed. Deployed dpl_HFUSN77Kpc8zcSPS6McVdufU19eF to https://veripost.io and confirmed root marker/header, clean ?path=/ rendering and safeRootPathHandoff:true logging, same-origin static-fetch recovery for ?auth and ?walletAuth= with query-source legacy auth logs, service-worker auth-trigger recovery markers, and zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T11:40:55Z",
+      "event": "early_runtime_initial_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added a head-level redacted world_runtime_initial diagnostic so likely World App launches can leave runtime shape evidence before React hydration. Focused early-guard/runtime/compose/diagnostics/GOALS tests passed with 115 tests; pnpm verify passed with 207 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate and git diff --check passed. Deployed dpl_4B6X43qDCPm2bcVuEDa7LUbgtEt6 to https://veripost.io and confirmed root marker/header, config/health, removed proof route 404, stale wallet-auth nonce 410, clean ?path=/ logging, ?auth/?walletAuth= static-fetch recovery, fake account-context proof reaches Address Book rejection, and one synthetic production world_runtime_initial log with no wallet/draft payload leakage. Current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T11:51:53Z",
+      "event": "auth_alias_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added stale authenticate/authorize alias recovery across proxy, hydrated navigation guard, head navigation guard, compose stale-handoff recovery, legacy cookie cleanup, and service-worker recovery. Focused auth-alias tests passed with 64 tests; broader runtime/compose tests passed with 100 tests; pnpm verify passed with 207 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate, service-worker byte identity, and git diff --check passed. Deployed dpl_9ADZTQZeAJ6UfiWD8YQdsLfGPniF to https://veripost.io and confirmed root marker/header, /authenticate and /authorize static-fetch recovery, /api/authenticate static-fetch recovery, /api/authorize JSON 410, ?authorize=true and ?path=/authenticate query recovery, service-worker auth-alias markers, config/health, removed proof route 404, stale wallet-auth nonce 410, fake account-context proof reaches Address Book rejection, and redacted production logs for the new path/query traps. Current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
+    },
+    {
+      "at": "2026-06-01T12:04:30Z",
+      "event": "sign_alias_recovery_deployed",
+      "from_stage": "done",
+      "to_stage": "done",
+      "note": "Added dashed/underscored stale sign-in/log-in/world-auth alias recovery across proxy, hydrated navigation guard, head navigation guard, compose stale-handoff recovery, launch-query redaction, and service-worker recovery. Focused alias tests passed with 64 tests; broader runtime/compose tests passed with 102 tests; pnpm verify passed with 207 Vitest tests plus 7 GOALS; pnpm audit --audit-level moderate, Spectacula validation, JSON validation, and git diff --check passed. Deployed dpl_EsifHZiSoGzi8PXnbn1tUxmouH2Y to https://veripost.io and confirmed root marker/header, /sign-in and /log_in static-fetch recovery, /api/sign-in and /api/log_in static-fetch recovery, /world/sign-in and /world-auth static-fetch recovery, /api/sign-in JSON 410, ?logIn=true and ?sign_in=true query recovery, service-worker alias markers, config/health, fake account-context proof reaches Address Book rejection, and redacted production logs for the new path/query traps. Current logs still contain zero real-device world_account_context_detected, world_proof_ready, or world_proof_created events."
     }
   ],
   "approved_at": "2026-05-26T15:10:31Z",

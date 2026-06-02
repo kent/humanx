@@ -1,5 +1,4 @@
 import { WORLD_ID_ACTION_DEFAULT } from "@/lib/text";
-import { hasXAuthConfig } from "@/lib/auth";
 import { ApiError } from "@/lib/http";
 
 export type WorldEnvironment = "production" | "staging";
@@ -21,7 +20,6 @@ export type PublicAppConfig = {
   appUrl: string;
   supportEmail: string;
   hasWorldConfig: boolean;
-  hasXAuthConfig: boolean;
   hasProofStorageConfig: boolean;
   maxPostTextLength: number;
 };
@@ -33,8 +31,8 @@ export function getWorldEnvironment(): WorldEnvironment {
 export function getWorldServerConfig(origin = ""): WorldServerConfig {
   return {
     appId: process.env.NEXT_PUBLIC_WORLD_APP_ID ?? "",
-    rpId: process.env.WORLD_RP_ID ?? "",
-    rpSigningKey: process.env.WORLD_RP_SIGNING_KEY ?? "",
+    rpId: process.env.WORLD_ID_RP_ID ?? "",
+    rpSigningKey: process.env.WORLD_ID_RP_SIGNING_KEY ?? "",
     action: process.env.WORLD_ID_ACTION ?? WORLD_ID_ACTION_DEFAULT,
     environment: getWorldEnvironment(),
     appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? origin).replace(/\/$/, ""),
@@ -42,12 +40,14 @@ export function getWorldServerConfig(origin = ""): WorldServerConfig {
   };
 }
 
-export function hasWorldVerificationConfig(config: WorldServerConfig): boolean {
-  return Boolean(config.appId && config.rpId && config.rpSigningKey);
-}
+export function missingWorldConfig(config: WorldServerConfig): string[] {
+  const missing: string[] = [];
 
-export function hasXLoginConfig(): boolean {
-  return hasXAuthConfig();
+  if (!config.appId.trim()) missing.push("NEXT_PUBLIC_WORLD_APP_ID");
+  if (!config.rpId.trim()) missing.push("WORLD_ID_RP_ID");
+  if (!config.rpSigningKey.trim()) missing.push("WORLD_ID_RP_SIGNING_KEY");
+
+  return missing;
 }
 
 export function hasDatabaseProofStorageConfig(): boolean {
@@ -78,14 +78,6 @@ export function assertProofStorageConfig(): void {
   throw new ApiError(503, "storage_not_configured", "Proof storage is not configured.", {
     missing: ["POSTGRES_URL", "DATABASE_URL"],
   });
-}
-
-export function missingWorldConfig(config: WorldServerConfig): string[] {
-  const missing: string[] = [];
-  if (!config.appId) missing.push("NEXT_PUBLIC_WORLD_APP_ID");
-  if (!config.rpId) missing.push("WORLD_RP_ID");
-  if (!config.rpSigningKey) missing.push("WORLD_RP_SIGNING_KEY");
-  return missing;
 }
 
 export function getRequestOrigin(request: Request): string {

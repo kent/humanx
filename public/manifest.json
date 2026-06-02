@@ -1,0 +1,50 @@
+{
+  "id": "/",
+  "name": "VeriPost",
+  "short_name": "VeriPost",
+  "description": "Create a proof for an X post from your logged-in World App account, with no separate sign-in.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f5ef",
+  "theme_color": "#f7f5ef",
+  "categories": ["productivity", "social"],
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/01-compose-open.png",
+      "sizes": "1290x2796",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Compose a post inside VeriPost"
+    },
+    {
+      "src": "/screenshots/02-compose-world-app.png",
+      "sizes": "1290x2796",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Use the logged-in World App account"
+    },
+    {
+      "src": "/screenshots/03-creating-proof.png",
+      "sizes": "1290x2796",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Create an in-app World ID proof"
+    }
+  ]
+}

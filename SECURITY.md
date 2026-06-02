@@ -20,8 +20,8 @@ Include:
 
 ## Security Expectations
 
-- Never commit World Developer Portal signing keys or `.env.local`.
-- Keep `WORLD_RP_SIGNING_KEY` server-side only.
-- Do not expose full World ID nullifiers in public proof pages.
+- Never commit `.env.local`, production database credentials, or other secrets.
+- Keep database credentials, private RPC credentials, and any private verifier credentials server-side.
+- Do not expose wallet addresses, raw World ID nullifiers, or verifier values in public proof pages.
 - Treat proof text and X post URLs as public once a proof is created.
 - Replace the local JSON proof store with durable production storage before public launch.

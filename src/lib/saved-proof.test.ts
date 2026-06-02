@@ -68,22 +68,21 @@ describe("saved proof parsing", () => {
 });
 
 describe("saved proof visibility", () => {
-  it("shows a saved proof for the same user when the compose box is empty", () => {
+  it("shows a saved proof when the compose box is empty", () => {
     const proofResult = parseSavedProofResult(makeSavedProof(), appOrigin);
 
-    expect(isSavedProofVisibleForDraft(proofResult, "@Alice", "")).toBe(true);
+    expect(isSavedProofVisibleForDraft(proofResult, "")).toBe(true);
   });
 
   it("shows a saved proof when the current draft still matches after normalization", () => {
     const proofResult = parseSavedProofResult(makeSavedProof(), appOrigin);
 
-    expect(isSavedProofVisibleForDraft(proofResult, "alice", " Posting   with VeriPost ")).toBe(true);
+    expect(isSavedProofVisibleForDraft(proofResult, " Posting   with VeriPost ")).toBe(true);
   });
 
-  it("hides a saved proof for a different draft or X account", () => {
+  it("hides a saved proof for a different draft", () => {
     const proofResult = parseSavedProofResult(makeSavedProof(), appOrigin);
 
-    expect(isSavedProofVisibleForDraft(proofResult, "alice", "A different post")).toBe(false);
-    expect(isSavedProofVisibleForDraft(proofResult, "bob", "")).toBe(false);
+    expect(isSavedProofVisibleForDraft(proofResult, "A different post")).toBe(false);
   });
 });

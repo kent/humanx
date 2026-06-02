@@ -1,69 +1,81 @@
 # Security Audit - 2026-05-29
 
-Scope: VeriPost Next.js World Mini App, World ID/IDKit proof flow, X OAuth gate, proof storage, production API routes, dependency lockfile, and repository secret exposure.
+Updated: 2026-06-01T11:19:42Z
 
-No Solidity, Vyper, Foundry, Hardhat, Truffle, or Brownie contract artifacts were present in the repository at audit time. The audited web3 surface is the off-chain proof contract between the client, backend RP signature endpoint, World verifier, X OAuth identity, and proof persistence.
+Scope: VeriPost Next.js World Mini App, World App account-context proof flow, backend World Address Book verification, proof storage, production API routes, dependency lockfile, and repository secret exposure.
+
+No Solidity, Vyper, Foundry, Hardhat, Truffle, or Brownie contract artifacts were present in the repository at audit time. The audited web3 surface is the off-chain proof contract between World App account context, backend Address Book verification, and proof persistence.
 
 ## Evidence
 
-- `find . -maxdepth 4 \( -name '*.sol' -o -name '*.vy' -o -name 'foundry.toml' -o -name 'hardhat.config.*' -o -name 'truffle-config.*' -o -name 'brownie-config.*' -o -name 'remappings.txt' \) -print` returned no files.
-- `pnpm audit --audit-level moderate` returned no known vulnerabilities.
-- Manual secret pattern scan found only code references, examples, and docs placeholders.
-- `pnpm outdated --format table` showed only `eslint` major-version drift after security dependency patching.
-- `pnpm verify` passed locally after fixes.
-- GitHub `CI`, `CodeQL`, and `OpenSSF Scorecard` passed on pushed commit `25401f7`.
-- Production probes after deployment:
-  - `POST /api/world/rp-signature` without `Origin` returned `403 missing_origin`.
-  - Same-origin JSON `POST /api/world/rp-signature` returned a valid production RP context.
-  - Non-JSON `POST /api/world/rp-signature` returned `415 unsupported_media_type`.
-  - Invalid JSON shape returned `400 invalid_request` without diagnostic details.
-  - `GET /api/health` returned `ok: true` with storage reachable.
+- Focused account-context compose, no-native-proof, proof route, runtime-diagnostics, middleware, and GOALS tests passed.
+- `pnpm typecheck` passed after clearing stale `.next/types` generated for the removed wallet-auth route.
+- Full verification passed with 204 Vitest tests plus 7 GOALS after adding startup refresh for pre-hydration fail-closed direct native bridge command guards, so native bridge targets injected shortly after the head script are still wrapped while allowing the narrow account-state `command:"init"` request. This extends the hydrated direct native bridge command guards and the previous fail-closed MiniKit command guards for redirect-capable SDK methods exposed after state-only initialization, while retaining client-side runtime recovery for stale history/hash/service-worker handoffs and native bridge fallback when official MiniKit install cannot reach the actual host bridge. Audit, deployment, and production probes for account-context proof creation, startup/config-aware account-state hydration, bounded bridge-first account-state hydration, MiniKit/native command-guard diagnostics, static-fetch World App launch recovery, unknown-key handoff recovery, bare hash handoff recovery, history/hashchange recovery, service-worker stale URL recovery, and safe root/hash values passed for this update. Spectacula validation, JSON validation, and diff checks passed after documentation updates.
+- `@worldcoin/minikit-js` is installed only for official `MiniKit.install(appId)` account-state hydration, with app-id-less startup initialization allowed only on real `window.WorldApp` surfaces when no build-time app id is available; `@worldcoin/idkit-core` is not installed.
+- The client posts `{ draftText, worldAppAccount }` to `/api/proofs` with `x-veripost-world-app-flow: account-context`.
+- The active compose path reads World App/MiniKit/account-provider state, calls `primeWorldAppRuntime(BUILD_TIME_WORLD_APP_ID)` at startup so production can run `MiniKit.install(appId)` before `/api/config`, calls `MiniKit.install(appId)` after config only for official in-app account-state hydration, can send only a narrow World App `command:"init"` state request when account context is still missing, and waits in place for account context. The state request can run when a real World App native bridge plus World App user-agent evidence or strong MiniKit/WorldApp bridge evidence appears before `window.WorldApp`, retries on a one-second cooldown up to five attempts while account context remains missing, retries after native transport appears following an initial missing-transport pass, and falls back to the actual native bridge when official MiniKit install cannot reach it because the host exposes alternate iOS handler casing or Android with a `webkit` object. Generic ReactNative-style bridge-only pages still receive no native message. It does not call `MiniKit.walletAuth`; redirect-capable MiniKit command methods exposed by the state-only SDK/global and direct native bridge command payloads other than `init` are patched to fail closed before and after React hydration if a stale handler tries to call them, including native bridge targets injected shortly after the head script runs.
+- Browser-loaded assets now include the MiniKit SDK initializer and may include unused SDK command implementations; source scans confirm the active compose/proof path does not call `MiniKit.walletAuth`, wallet-auth/sign native commands, IDKit, connector, fallback wallet, or X auth.
+- The active compose path does not call wallet-auth, IDKit, MiniKit verify, MiniKit sign-message, MiniKit sign-typed-data, Wagmi fallback, Auth.js, X login, `ethereum.request`, wallet permission APIs, `window.open`, app-owned connector navigation, or World universal-link navigation for proof creation. Its only app-owned native `postMessage` is the non-auth `command:"init"` state request.
+- The client records redacted `world_account_check_started`, `world_account_context_detected`, `world_proof_request_started`, and `world_proof_ready` events without logging wallet addresses, nonce values, SIWE messages, signatures, proof bodies, or draft text. The hydrated diagnostics sender now uses `sendBeacon` first and a same-origin `fetch` fallback with `keepalive: true` for pagehide/hidden-webview evidence.
+- `/api/world-wallet-auth/nonce` is removed from the app route list and trapped as stale auth with same-origin HTTP 410 `legacy_auth_removed`.
+- `/api/proofs` accepts `{ draftText, worldAppAccount }`, validates same-origin/in-app provenance, verifies the submitted account address against the World ID Address Book, derives the nullifier, and stores only after that check passes.
+- Old redirect-capable wallet-auth nonce routes are absent or trapped: `/api/wallet-auth/nonce`, `/api/world/wallet-auth/nonce`, `/api/world-miniapp/wallet-auth/nonce`, and `/api/world-wallet-auth/nonce`.
+- `/api/world-proof/request`, native IDKit proof helpers, stale `worldIdProof` storage paths, and stale `worldWalletAuth` proof payloads are removed or fail closed before proof storage.
+- Legacy redirect-capable auth/signature entrypoints remain trapped. Stale login/OAuth/SIWE/X-login/proof-session and common MiniKit/SIWE sample endpoints such as `/api/nonce`, `/api/complete-siwe`, `/api/session`, and `/api/verify` return same-origin `410 legacy_auth_removed`; no-query, sparse, and query-bearing World App document launches use same-origin `static-fetch` recovery that cleans the visible URL to `/` and fetches the clean root app shell without embedding callback/OAuth target values or stale Next route state, including unknown root keys whose values are URL/path-like auth handoffs, schemeless X/World/auth host values, or relative `api/auth` and `oauth2` paths. Client-side hash recovery also treats bare `key=value` fragments as root handoff candidates so nested OAuth query strings cannot hide the handoff key, and the early/hydrated guards block stale history state mutations plus recover direct hashchange/popstate handoffs after load. Non-World-App document launches use manual static same-origin recovery HTML.
+- Recovery pages avoid authentication wording, and the shipped root/app-shell HTML no longer contains raw stale handoff tokens such as `callbackUrl`, `redirect_uri`, `worldapp:`, or `worldcoin.org`; the runtime guards still reconstruct and block those values when they appear at navigation time.
+- The response CSP path-scopes external navigation to `https://x.com/intent/tweet` and `https://twitter.com/intent/tweet`; broad X host navigation is not allowed by the policy.
+- Client startup removes CacheStorage entries and unregisters service workers. `/sw.js` and `/service-worker.js` are self-unregistering cache-delete scripts for common stale service-worker paths and sanitize stale auth/root/hash client URLs to `/` before navigating controlled clients during activation.
+
+## Production Probe Summary
+
+Deployment `dpl_6kDVM67tLQNBziW6StvLXgTf8Cg2` is aliased to `https://veripost.io`.
+
+- Root HTML contains `data-dpl-id="dpl_6kDVM67tLQNBziW6StvLXgTf8Cg2"` and `X-VeriPost-Flow: world-miniapp-account-context-2026-06-01`.
+- Root/API/stale-auth responses returned the path-scoped `navigate-to` CSP for only same-origin, mail, and explicit X/Twitter tweet intents.
+- `/sw.js` and `/service-worker.js` returned no-store, `Clear-Site-Data`, and `Service-Worker-Allowed: /` headers; both scripts are byte-identical and include `getRecoveryUrl`, `isLegacyHashHandoff`, and `client.navigate(getRecoveryUrl(client.url))`. VM execution of the live script confirmed stale auth paths, stale root handoff queries, and stale hash handoffs recover to `/`, while safe `/proof/*` URLs remain unchanged.
+- `GET /api/config` returned production World config and proof storage config without native proof readiness fields.
+- `GET /api/health` returned HTTP 200 with storage checks healthy and no native proof readiness field on three consecutive probes.
+- `POST /api/world-proof/request` returned HTTP 404, confirming the old RP/native proof request route is gone from production.
+- `POST /api/world-wallet-auth/nonce` returned HTTP 410 JSON `legacy_auth_removed` with no external `Location`, including sparse `Accept: */*` JSON posts, confirming the stale wallet-auth nonce route is trapped.
+- A fake account-context proof POST to `/api/proofs` returned HTTP 403 `world_address_unverified`, proving the active proof route no longer requires `worldWalletAuth` and reaches Address Book verification rather than an IDKit/RP/wallet-auth gate.
+- No-query World App stale auth and exact mini app shell document launches recovered through same-origin `x-veripost-legacy-recovery: static-fetch` HTML with `x-veripost-legacy-auth-blocked:true`, no external `Location`, no middleware rewrite, strict `navigate-to 'self'; form-action 'none'` CSP, `history.replaceState` cleanup to `/`, same-origin clean-root fetch, no top-level `window.location.replace`, no stale Next route state, no authentication wording, no callback/OAuth target values, and no `app-rewrite` marker.
+- Sparse World App stale auth and mini app shell launches with `Accept: */*` and `sec-fetch-mode: cors` used the same static-fetch recovery; explicit JSON stale auth requests still returned same-origin `410`.
+- Query-bearing World App stale auth/root handoffs used the same static-fetch recovery with no external `Location`, no middleware rewrite, strict `navigate-to 'self'; form-action 'none'` CSP, `history.replaceState` cleanup to `/`, a same-origin root app-shell fetch, no top-level `window.location.replace`, no authentication wording, and no callback/OAuth target values in the body. Live unknown-key probes on the current deployment for `fallback=api/auth/signin/twitter`, `oauth_callback=x.com/i/oauth2/authorize?...`, `launch=world.org/mini-app?...`, and `oauth_path=oauth2/authorize?...` recovered in place; safe root `note=world` was not trapped. Executing the production-shipped inline early guard from live HTML confirmed bare fragment `#fallback=api/auth/signin/twitter&oauth_callback=x.com/i/oauth2/authorize?...` cleans to `/?debug=world`, stale runtime history push/replace handoffs are blocked, direct stale hash mutation on `/proof/vp_123?debug=world` recovers to that safe proof path, pre-hydration `command:"init"` reaches a native bridge injected after the head script, stale `command:"wallet-auth"` is dropped with `veripost:native-command-blocked` and a redacted `early_native_command` diagnostic, and `#note=world` remains allowed, with redacted diagnostics throughout.
+- Non-World-App removed auth document navigations recovered through manual static same-origin recovery HTML with `x-veripost-legacy-auth-blocked:true`, `x-veripost-legacy-recovery: static`, no external `Location`, no middleware rewrite, and no Next app-shell route state.
+- Browser-loaded root/static asset scans confirmed active account-context markers `app_dc56f8eecb48c4d395981ec1ca5c6329`, `__without_app_id__`, `world_account_context_pending`, `world_account_check_started`, `world_account_context_detected`, `world_proof_request_started`, `world_proof_ready`, `waitForWorldAppAccountRuntime`, `MiniKit.install`, `command:"init"`, `payload:{version:1,minorVersion:96}`, `MiniKitAndroid`, `WorldAppAndroid`, `ReactNativeWebView`, `/api/runtime-diagnostics`, `veripost:minikit-command-blocked`, `minikit-command=blocked`, `veripost:native-command-blocked`, `native-command=blocked`, `early_native_command`, `veripost.native-post-message-guarded`, and `keepalive` are present, including the configured-app-id startup official MiniKit account-state initializer, bridge-first raw init path for strong World App native bridge surfaces, fail-closed MiniKit command guard, hydrated direct native bridge command guard, and pre-hydration direct native bridge command guard. The source marker `BUILD_TIME_WORLD_APP_ID` and helper name `hasLikelyWorldAppNativeTransport` are minified out of loaded browser assets, while the app id literal and native bridge markers confirm the production value and bridge-first path were bundled. The loaded chunks remain absent for `/api/world-proof/request` and `ethereum.request`.
+- Production-source scans confirmed the active compose/proof path does not call `MiniKit.walletAuth`, `walletAuth`, `command:"wallet-auth"`, `command:"sign-message"`, `command:"sign-typed-data"`, `miniapp-wallet-auth`, `/api/world-wallet-auth/nonce`, wallet-auth diagnostics, X OAuth, IDKit, `MiniKitProvider`, connector-opening calls, `/api/world-proof/request`, `requestNativeWorldIdProof`, Wagmi fallback, `ethereum.request`, or signer-bypass material. Browser assets may contain unused SDK command implementations from `@worldcoin/minikit-js`; these are not app-owned proof-flow calls.
+- Production logs confirmed redacted fake-proof `world_proof_rejected` with `code:"world_address_unverified"` under runtime session `runtime-prod-late-native-bridge-guard-probe` and a redacted `world_external_navigation_blocked` diagnostic with `errorMessage:"Blocked early_native_command navigation to native-command=blocked before React hydration."` from the live late-bridge guard probe. The current log probe found no real-device `world_account_context_detected`, `world_proof_request_started`, `world_proof_ready`, or `world_proof_created` logs yet.
 
 ## Findings Fixed
 
-### Internal Error Detail Exposure
+### External Auth Redirects
 
-Production API errors returned diagnostic `details`, including possible verifier or storage internals. `errorResponse` now redacts Zod and `ApiError` details in production launch runtime.
+The active Post path no longer starts X-login, wallet-auth, IDKit, fallback wallet, browser auth, app-owned navigation, or connector navigation. It stays inside World App and uses account context already exposed by the host.
 
-### Weak Browser Provenance Checks
+### Wallet-Auth Prompt Leaves Mini App
 
-Production POST routes accepted requests with no `Origin` or `Referer`. Same-origin API POSTs now require browser provenance in production, reject cross-site Fetch Metadata, and still allow local/dev requests without those headers.
+Wallet-auth has been removed from the active proof path. The stale `/api/world-wallet-auth/nonce` route is trapped with same-origin HTTP 410, and the client no longer emits wallet-auth diagnostics or includes `worldWalletAuth` in proof requests.
 
-### Missing JSON And Body-Size Enforcement
+### Account Verification
 
-Proof and RP-signature routes relied on JSON parsing failures after accepting arbitrary content types and lengths. They now require `application/json` and enforce per-route body caps before parsing.
+The backend verifies the submitted World App account address through the World ID Address Book before storing a proof. This is an account-context verification path, not a cryptographic wallet-ownership signature path.
 
-### Unbounded World Verifier Call
+### Signature-Bearing Error Logs
 
-World verifier requests had no timeout. Verification now uses a 10 second abort timeout.
+Proof rejection logs include only redacted code/provenance/runtime-session metadata and never include wallet addresses, signatures, SIWE messages, proof bodies, nonce values, or draft text.
 
-### Session Proof Acceptance From Verifier Response
+### Stale Webview Shell Reuse
 
-Client payload session proofs were rejected, but a verifier response containing `session_id` was not explicitly rejected. Verifier session proofs now fail closed.
+The app keeps the early inline navigation guard, Next `instrumentation-client` guard, hydrated navigation guard, app-rewrite/static-fetch/manual static stale auth proxy recovery, path-scoped navigation CSP, legacy cookie/storage purging, client CacheStorage deletion, service-worker unregistration, and static service-worker kill scripts that sanitize stale client URLs before activation reloads. Root/app-shell responses purge stale cache/cookies/storage; API responses remain no-store.
 
-### Oversized Nullifier Handling
+### Browser Provenance And Body Validation
 
-Nullifier conversion accepted arbitrarily long decimal/hex strings. Nullifier length is now bounded before conversion/storage.
-
-### Conditional Postgres TLS
-
-Postgres TLS was required only for recognized URL patterns. Remote Postgres connections now require TLS by default; only localhost addresses are allowed without TLS. The migration script uses the same rule.
-
-### Public Health Check DB Pressure
-
-The public health route could query proof storage on every request. Health results are now cached briefly per runtime instance to reduce database pressure.
-
-### Rate-Limit Key Pressure
-
-Forwarded client IP identifiers were not bounded before use in in-memory rate-limit keys. Client IP identifiers are now capped and the in-memory bucket map has a fixed ceiling.
-
-### Supply Chain Drift
-
-Patch updates were applied for `@worldcoin/idkit`, `postgres`, `viem`, `wagmi`, and `lucide-react`. This also removed a non-registry `pkg.pr.new` transitive tarball for `ox` from the lockfile.
+POST routes require same-origin provenance or the explicit in-app flow marker for mobile webviews, reject cross-site Fetch Metadata, enforce JSON content type and body caps, and rate-limit proof/diagnostic routes.
 
 ## Residual Risks
 
-- Rate limiting is still in-memory and per runtime instance. It is useful friction but not a global abuse-control layer. A durable Redis/Postgres-backed limiter is the next hardening step if abuse appears.
-- Public proof pages intentionally publish user-submitted post text. Operational moderation and deletion handling through `support@veripost.io` remains required.
-- The final end-to-end iPhone World App test still requires a real production World ID account and X account.
-- Static analysis tools such as `gitleaks`, `semgrep`, `osv-scanner`, and `trufflehog` were not installed locally; the audit used `pnpm audit`, GitHub CodeQL, OpenSSF Scorecard, manual route review, lockfile review, and targeted secret-pattern scanning.
+- Real-device World App success evidence is still pending. Required evidence: open from World App, tap Post, remain inside the mini app, use the already logged-in World App account context without wallet-auth/fallback/external navigation, reach proof-ready, and observe `world_account_context_detected`, `world_proof_ready`, and `world_proof_created` in production logs.
+- The current account-context path verifies the World account address through Address Book but does not cryptographically bind the submitted address with a fresh wallet-auth signature.
+- Rate limiting is still in-memory and per runtime instance.
+- Public proof pages intentionally publish user-submitted post text; moderation and deletion handling through `support@veripost.io` remains operationally required.
+- The public World ecosystem listing still contains stale "Log in with X" and "complete a private World ID proof" copy as of 2026-06-01T11:16:52Z. The canonical World launch URL resolves through the public ecosystem page and the page HTML does not expose `veripost.io` or auth callback markers, so this appears to be Developer Portal listing metadata that must be updated so reviewers see the current account-context proof flow.
