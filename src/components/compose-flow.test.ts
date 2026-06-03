@@ -5,7 +5,11 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ComposeFlow from "@/components/compose-flow";
-import { buildXIntentUrl } from "@/lib/x";
+
+const TWEET_URL = "https://x.com/poster/status/100";
+const BINDING_NONCE = "test-binding-nonce.signature";
+const BOUND_SIGNAL = `veripost:v2:${"a".repeat(64)}`;
+const PROOF_READY_TEXT = "Proof ready and bound to your X post.";
 
 const requestNativeWorldIdKitProofMock = vi.hoisted(() => vi.fn());
 
@@ -62,6 +66,8 @@ type ProofRequest = {
   headers: Record<string, string>;
   body: {
     draftText?: string;
+    tweetUrl?: string;
+    bindingNonce?: string;
     idkitResponse?: Record<string, unknown>;
   };
 };
@@ -157,7 +163,7 @@ describe("ComposeFlow World App IDKit proof path", () => {
 
     await waitFor(() => {
       expect(proofRequests).toHaveLength(1);
-      expect(container.textContent).toContain("Proof ready. Post to X when you are ready.");
+      expect(container.textContent).toContain(PROOF_READY_TEXT);
       expect(container.textContent).toContain("World proof trace");
       expect(container.textContent).toContain("world_account_check_started");
       expect(container.textContent).toContain("world_account_context_detected");
@@ -177,6 +183,8 @@ describe("ComposeFlow World App IDKit proof path", () => {
       }),
       body: {
         draftText,
+        tweetUrl: TWEET_URL,
+        bindingNonce: BINDING_NONCE,
         idkitResponse,
       },
     });
@@ -197,7 +205,7 @@ describe("ComposeFlow World App IDKit proof path", () => {
       action: "veripost-tweet-proof",
       appId: "app_dc56f8eecb48c4d395981ec1ca5c6329",
       environment: "production",
-      signal: expect.stringMatching(/^veripost:v1:/),
+      signal: BOUND_SIGNAL,
     }));
     expect(JSON.stringify(proofRequests)).not.toContain("worldIdProof");
     expect(JSON.stringify(proofRequests)).not.toContain("worldAppAccount");
@@ -248,7 +256,7 @@ describe("ComposeFlow World App IDKit proof path", () => {
 
     await waitFor(() => {
       expect(proofRequests).toHaveLength(1);
-      expect(container.textContent).toContain("Proof ready. Post to X when you are ready.");
+      expect(container.textContent).toContain(PROOF_READY_TEXT);
     });
 
     expect(visitedUrls).toEqual([]);
@@ -353,10 +361,7 @@ describe("ComposeFlow World App IDKit proof path", () => {
       ]));
     });
 
-    await act(async () => {
-      setNativeTextAreaValue(getPostTextArea(container), draftText);
-      getPostTextArea(container).dispatchEvent(new InputEvent("input", { bubbles: true }));
-    });
+    await fillCompose(container);
 
     await waitFor(() => {
       expect(getPrimaryButton(container).disabled).toBe(false);
@@ -377,7 +382,7 @@ describe("ComposeFlow World App IDKit proof path", () => {
 
     await waitFor(() => {
       expect(proofRequests).toHaveLength(1);
-      expect(container.textContent).toContain("Proof ready. Post to X when you are ready.");
+      expect(container.textContent).toContain(PROOF_READY_TEXT);
     }, 2_000);
 
     expect(proofRequests[0]).toEqual(expect.objectContaining({
@@ -425,10 +430,7 @@ describe("ComposeFlow World App IDKit proof path", () => {
       expect(getPostTextArea(container).disabled).toBe(false);
     });
 
-    await act(async () => {
-      setNativeTextAreaValue(getPostTextArea(container), draftText);
-      getPostTextArea(container).dispatchEvent(new InputEvent("input", { bubbles: true }));
-    });
+    await fillCompose(container);
 
     await waitFor(() => {
       expect(getPrimaryButton(container).disabled).toBe(false);
@@ -543,7 +545,7 @@ describe("ComposeFlow World App IDKit proof path", () => {
 
     await waitFor(() => {
       expect(proofRequests).toHaveLength(1);
-      expect(container.textContent).toContain("Proof ready. Post to X when you are ready.");
+      expect(container.textContent).toContain(PROOF_READY_TEXT);
     });
 
     expect(proofRequests[0]).toEqual(expect.objectContaining({
@@ -616,7 +618,7 @@ describe("ComposeFlow World App IDKit proof path", () => {
 
     await waitFor(() => {
       expect(proofRequests).toHaveLength(1);
-      expect(container.textContent).toContain("Proof ready. Post to X when you are ready.");
+      expect(container.textContent).toContain(PROOF_READY_TEXT);
     }, 2_000);
 
     expect(visitedUrls).toEqual([]);
@@ -675,10 +677,7 @@ async function renderCompose(container: HTMLElement): Promise<void> {
 }
 
 async function enterDraftAndPost(container: HTMLElement): Promise<void> {
-  await act(async () => {
-    setNativeTextAreaValue(getPostTextArea(container), draftText);
-    getPostTextArea(container).dispatchEvent(new InputEvent("input", { bubbles: true }));
-  });
+  await fillCompose(container);
 
   await waitFor(() => {
     expect(getPrimaryButton(container).disabled).toBe(false);
@@ -687,6 +686,27 @@ async function enterDraftAndPost(container: HTMLElement): Promise<void> {
   await act(async () => {
     getPrimaryButton(container).click();
   });
+}
+
+async function fillCompose(container: HTMLElement, tweetUrl: string = TWEET_URL): Promise<void> {
+  await act(async () => {
+    setNativeTextAreaValue(getPostTextArea(container), draftText);
+    getPostTextArea(container).dispatchEvent(new InputEvent("input", { bubbles: true }));
+    setNativeInputValue(getTweetUrlInput(container), tweetUrl);
+    getTweetUrlInput(container).dispatchEvent(new InputEvent("input", { bubbles: true }));
+  });
+}
+
+function getTweetUrlInput(container: HTMLElement): HTMLInputElement {
+  const input = container.querySelector<HTMLInputElement>("#tweet-url");
+  if (!input) throw new Error("Tweet URL input was not rendered.");
+  return input;
+}
+
+function setNativeInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  if (!setter) throw new Error("Input value setter is unavailable.");
+  setter.call(input, value);
 }
 
 function stubFetch(options: {
@@ -726,6 +746,8 @@ function stubFetch(options: {
           expires_at: 1_800_000_180,
           signature: "0x" + "4".repeat(130),
         },
+        bindingNonce: BINDING_NONCE,
+        signal: BOUND_SIGNAL,
       });
     }
 
@@ -750,9 +772,11 @@ function successfulProofResponse(id: string): Response {
       draftText,
       createdAt: "2026-05-31T10:20:00.000Z",
       proofCommitment: "a".repeat(64),
+      xHandle: "poster",
+      tweetId: "100",
     },
     proofUrl,
-    tweetIntentUrl: buildXIntentUrl(draftText, proofUrl),
+    tweetUrl: TWEET_URL,
     createdNew: true,
   });
 }

@@ -100,10 +100,10 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).not.toContain("requestWorldWalletAuth");
     expect(composeFlow).not.toContain("MiniKit.walletAuth");
     expect(composeFlow).not.toContain('fallback: () =>');
-    expect(composeFlow).toContain("Preparing in-app World ID proof.");
+    expect(composeFlow).toContain("preparing the in-app World ID proof");
     expect(composeFlow).toContain("Waiting for World App proof runtime.");
     expect(composeFlow).toContain("postButtonLabel");
-    expect(composeFlow).toContain("Checking World");
+    expect(composeFlow).toContain("Verifying post");
     expect(composeFlow).toContain("Creating proof");
     expect(composeFlow).toContain('role="alert"');
     expect(composeFlow).toContain('role="status"');
@@ -159,8 +159,8 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain('disabled={busy || phase === "loading"}');
     expect(composeFlow).toContain('credentials: "same-origin"');
     expect(composeFlow).toContain('"x-veripost-runtime-session": WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID');
-    expect(composeFlow).toContain('"x-veripost-world-app-flow": worldProofPayload.flow');
-    expect(composeFlow).toContain("flow: WORLD_MINIAPP_AUTH_FLOW");
+    expect(composeFlow).toContain('"x-veripost-world-app-flow": WORLD_MINIAPP_AUTH_FLOW');
+    expect(composeFlow).toContain("bindingNonce");
     expect(composeFlow).toContain("requestNativeWorldIdKitProof");
     expect(composeFlow).not.toContain("requestNativeWorldIdProof");
     expect(composeFlow).not.toContain("createWorldIdProofRequest");
@@ -173,9 +173,9 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain("World ID proof check needs Mini App and RP configuration.");
     expect(composeFlow).not.toContain("Waiting for World App proof bridge.");
     expect(composeFlow).toContain("hasProofStorageConfig");
-    expect(composeFlow).toContain("Proof ready. Post to X when you are ready.");
+    expect(composeFlow).toContain("Proof ready and bound to your X post.");
     expect(composeFlow).toContain("onClick={handlePrimaryAction}");
-    expect(composeFlow).toContain("href={proofResult.tweetIntentUrl}");
+    expect(composeFlow).toContain("href={proofResult.tweetUrl}");
     expect(composeFlow).toContain("disabled={!canPost}");
     expect(composeFlow).not.toContain("requestWorldMiniAppWalletAuth");
     expect(composeFlow).not.toContain("worldMiniAppWalletAuth");

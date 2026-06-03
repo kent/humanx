@@ -24,4 +24,23 @@ describe("post text normalization", () => {
     expect(validatePostText(" \n\t ").ok).toBe(false);
     expect(validatePostText("x".repeat(221)).ok).toBe(false);
   });
+
+  it("strips zero-width / BOM / control characters", () => {
+    expect(normalizePostText("hel​lo﻿ wo‍rld")).toBe("hello world");
+    expect(normalizePostText("abc")).toBe("abc");
+  });
+
+  it("hashes an invisible-char attack identically to the clean text", () => {
+    const clean = hashDraftText(normalizePostText("Vote for me"));
+    const attack = hashDraftText(normalizePostText("Vote​ for me"));
+    expect(attack).toBe(clean);
+  });
+
+  it("NFC-normalizes composed and decomposed forms to the same hash", () => {
+    const composed = "café"; // é
+    const decomposed = "café"; // e + combining acute
+    expect(hashDraftText(normalizePostText(composed))).toBe(
+      hashDraftText(normalizePostText(decomposed)),
+    );
+  });
 });

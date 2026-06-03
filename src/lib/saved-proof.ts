@@ -1,5 +1,6 @@
 import { normalizePostText } from "@/lib/text";
 import { normalizeXUsername } from "@/lib/x";
+import { parseTweetUrl } from "@/lib/x-tweet";
 
 export type SavedPublicProof = {
   id: string;
@@ -7,12 +8,14 @@ export type SavedPublicProof = {
   createdAt: string;
   proofCommitment: string;
   xUsername?: string;
+  xHandle?: string;
+  tweetId?: string;
 };
 
 export type SavedProofResult = {
   proof: SavedPublicProof;
   proofUrl: string;
-  tweetIntentUrl: string;
+  tweetUrl: string;
   createdNew: boolean;
 };
 
@@ -26,13 +29,13 @@ export function parseSavedProofResult(value: unknown, appOrigin: string): SavedP
   const proofUrl = normalizeSameOriginProofUrl(result.proofUrl, appOrigin);
   if (!proofUrl) return null;
 
-  const tweetIntentUrl = normalizeMatchingXIntentUrl(result.tweetIntentUrl, proofUrl, proof.draftText);
-  if (!tweetIntentUrl) return null;
+  const tweetUrl = normalizeTweetUrl(result.tweetUrl);
+  if (!tweetUrl) return null;
 
   return {
     proof,
     proofUrl,
-    tweetIntentUrl,
+    tweetUrl,
     createdNew: result.createdNew,
   };
 }
@@ -66,6 +69,8 @@ function normalizeProof(value: unknown): SavedPublicProof | null {
     createdAt: proof.createdAt,
     proofCommitment: proof.proofCommitment,
     xUsername: normalizeXUsername(proof.xUsername) ?? undefined,
+    xHandle: typeof proof.xHandle === "string" ? proof.xHandle : undefined,
+    tweetId: typeof proof.tweetId === "string" ? proof.tweetId : undefined,
   };
 }
 
@@ -84,22 +89,9 @@ function normalizeSameOriginProofUrl(value: unknown, appOrigin: string): string 
   }
 }
 
-function normalizeMatchingXIntentUrl(value: unknown, proofUrl: string, postText: string): string | null {
+function normalizeTweetUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
-
-  try {
-    const url = new URL(value);
-    if (
-      url.origin !== "https://x.com" ||
-      url.pathname !== "/intent/tweet" ||
-      url.searchParams.get("url") !== proofUrl ||
-      url.searchParams.get("text") !== postText
-    ) {
-      return null;
-    }
-
-    return url.toString();
-  } catch {
-    return null;
-  }
+  const parsed = parseTweetUrl(value);
+  if (!parsed) return null;
+  return `https://x.com/${parsed.handle}/status/${parsed.tweetId}`;
 }

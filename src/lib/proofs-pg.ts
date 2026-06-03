@@ -14,6 +14,8 @@ type ProofRow = {
   signal_hash: string;
   proof_commitment: string;
   x_username: string | null;
+  x_handle: string | null;
+  tweet_id: string | null;
   nullifier_decimal: string;
   world_verified_at: Date;
   world_result_code: string | null;
@@ -55,6 +57,8 @@ function rowToProof(row: ProofRow): StoredProofClaim {
     signalHash: row.signal_hash,
     proofCommitment: row.proof_commitment,
     xUsername: row.x_username ?? undefined,
+    xHandle: row.x_handle ?? undefined,
+    tweetId: row.tweet_id ?? undefined,
     nullifierDecimal: row.nullifier_decimal,
     worldVerification: {
       verifiedAt: row.world_verified_at.toISOString(),
@@ -101,6 +105,18 @@ export async function pgGetById(id: string): Promise<StoredProofClaim | null> {
   }
 }
 
+export async function pgGetByTweetId(tweetId: string): Promise<StoredProofClaim | null> {
+  try {
+    const db = getSql();
+    const rows = await db<ProofRow[]>`SELECT * FROM proofs WHERE tweet_id = ${tweetId} LIMIT 1`;
+    return rows.length > 0 ? rowToProof(rows[0]) : null;
+  } catch (error) {
+    throw new ApiError(503, "storage_error", "Proof storage is unavailable.", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export async function pgUpsertProof(
   input: CreateProofInput & { id: string; proofCommitment: string; now: string },
 ): Promise<{ proof: StoredProofClaim; createdNew: boolean }> {
@@ -108,29 +124,35 @@ export async function pgUpsertProof(
     const db = getSql();
     const verifiedAt = new Date(input.worldVerification.verifiedAt);
 
+    // One proof per tweet. The conflict update only applies when the SAME World
+    // ID identity re-proves its own tweet; a different identity colliding on the
+    // tweet returns no row, which we surface as 409 tweet_already_proven.
     const rows = await db<(ProofRow & { _inserted: boolean })[]>`
       INSERT INTO proofs (
         id, action, environment, draft_text, draft_hash, signal, signal_hash,
-        proof_commitment, x_username, nullifier_decimal,
+        proof_commitment, x_username, x_handle, tweet_id, nullifier_decimal,
         world_verified_at, world_result_code, world_session_id
       )
       VALUES (
         ${input.id}, ${input.action}, ${input.environment},
         ${input.draftText}, ${input.draftHash}, ${input.signal}, ${input.signalHash},
-        ${input.proofCommitment}, ${input.xUsername ?? null}, ${input.nullifierDecimal},
+        ${input.proofCommitment}, ${input.xUsername ?? null}, ${input.xHandle ?? null},
+        ${input.tweetId ?? null}, ${input.nullifierDecimal},
         ${verifiedAt}, ${input.worldVerification.resultCode ?? null}, ${input.worldVerification.sessionId ?? null}
       )
-      ON CONFLICT (nullifier_decimal, draft_hash) DO UPDATE SET
+      ON CONFLICT (tweet_id) WHERE tweet_id IS NOT NULL DO UPDATE SET
         x_username = EXCLUDED.x_username,
+        x_handle = EXCLUDED.x_handle,
         world_verified_at = EXCLUDED.world_verified_at,
         world_result_code = EXCLUDED.world_result_code,
         world_session_id = EXCLUDED.world_session_id,
         updated_at = NOW()
+      WHERE proofs.nullifier_decimal = EXCLUDED.nullifier_decimal
       RETURNING *, (xmax = 0) AS _inserted
     `;
 
     if (rows.length === 0) {
-      throw new ApiError(503, "storage_error", "Proof storage returned no rows.");
+      throw new ApiError(409, "tweet_already_proven", "This X post already has a VeriPost proof.");
     }
 
     const row = rows[0];

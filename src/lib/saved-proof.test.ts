@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildXIntentUrl } from "@/lib/x";
 import { isSavedProofVisibleForDraft, parseSavedProofResult } from "@/lib/saved-proof";
 
 const appOrigin = "https://veripost.io";
 const proofUrl = `${appOrigin}/proof/vp_123`;
+const tweetUrl = "https://x.com/alice/status/100";
 
 function makeSavedProof(overrides: Record<string, unknown> = {}) {
   const proof = {
@@ -13,41 +13,47 @@ function makeSavedProof(overrides: Record<string, unknown> = {}) {
     createdAt: "2026-05-26T16:00:00.000Z",
     proofCommitment: "a".repeat(64),
     xUsername: "alice",
+    xHandle: "alice",
+    tweetId: "100",
   };
 
   return {
     proof,
     proofUrl,
-    tweetIntentUrl: buildXIntentUrl(proof.draftText, proofUrl),
+    tweetUrl,
     createdNew: true,
     ...overrides,
   };
 }
 
 describe("saved proof parsing", () => {
-  it("accepts saved proofs with matching same-origin proof and X intent URLs", () => {
-    expect(parseSavedProofResult(makeSavedProof(), appOrigin)).toEqual(makeSavedProof());
+  it("accepts saved proofs with a same-origin proof URL and a real tweet URL", () => {
+    const parsed = parseSavedProofResult(makeSavedProof(), appOrigin);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.proofUrl).toBe(proofUrl);
+    expect(parsed?.tweetUrl).toBe(tweetUrl);
+    expect(parsed?.proof.xHandle).toBe("alice");
+    expect(parsed?.proof.tweetId).toBe("100");
   });
 
   it("normalizes saved X usernames", () => {
-    expect(
-      parseSavedProofResult(
-        makeSavedProof({
-          proof: {
-            id: "vp_123",
-            draftText: "Posting with VeriPost",
-            createdAt: "2026-05-26T16:00:00.000Z",
-            proofCommitment: "a".repeat(64),
-            xUsername: "@Alice",
-          },
-        }),
-        appOrigin,
-      )?.proof.xUsername,
-    ).toBe("alice");
+    const parsed = parseSavedProofResult(
+      makeSavedProof({
+        proof: {
+          id: "vp_123",
+          draftText: "Posting with VeriPost",
+          createdAt: "2026-05-26T16:00:00.000Z",
+          proofCommitment: "a".repeat(64),
+          xUsername: "@Alice",
+        },
+      }),
+      appOrigin,
+    );
+    expect(parsed?.proof.xUsername).toBe("alice");
   });
 
   it("rejects malformed proof payloads", () => {
-    expect(parseSavedProofResult({ proofUrl, tweetIntentUrl: buildXIntentUrl("hello", proofUrl) }, appOrigin)).toBeNull();
+    expect(parseSavedProofResult({ proofUrl, tweetUrl }, appOrigin)).toBeNull();
     expect(parseSavedProofResult(makeSavedProof({ createdNew: "true" }), appOrigin)).toBeNull();
   });
 
@@ -55,15 +61,9 @@ describe("saved proof parsing", () => {
     expect(parseSavedProofResult(makeSavedProof({ proofUrl: "https://evil.example/proof/vp_123" }), appOrigin)).toBeNull();
   });
 
-  it("rejects tweet intents that do not match the saved proof", () => {
-    expect(
-      parseSavedProofResult(
-        makeSavedProof({
-          tweetIntentUrl: buildXIntentUrl("Different text", proofUrl),
-        }),
-        appOrigin,
-      ),
-    ).toBeNull();
+  it("rejects tweet URLs that are not real X status links", () => {
+    expect(parseSavedProofResult(makeSavedProof({ tweetUrl: "https://x.com/alice" }), appOrigin)).toBeNull();
+    expect(parseSavedProofResult(makeSavedProof({ tweetUrl: "https://evil.example/alice/status/1" }), appOrigin)).toBeNull();
   });
 });
 

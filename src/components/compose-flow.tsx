@@ -25,6 +25,8 @@ import {
   type WorldIdKitRpContext,
 } from "@/lib/world-idkit-client";
 import { WORLD_MINIAPP_AUTH_FLOW } from "@/lib/world-miniapp-auth";
+import { buildXTextIntentUrl } from "@/lib/x";
+import { parseTweetUrl } from "@/lib/x-tweet";
 
 type AppConfig = {
   action: string;
@@ -133,15 +135,21 @@ async function readApiError(response: Response): Promise<string> {
   return code && !message.includes(code) ? `${message} [${code}]` : message;
 }
 
-async function readWorldIdKitRpContext(response: Response): Promise<WorldIdKitRpContext> {
+type RpContextResponse = {
+  rpContext: WorldIdKitRpContext;
+  bindingNonce: string;
+  signal: string;
+};
+
+async function readWorldIdKitRpContext(response: Response): Promise<RpContextResponse> {
   const payload = (await response.json().catch(() => null)) as
-    | { rpContext?: WorldIdKitRpContext }
+    | Partial<RpContextResponse>
     | null;
-  if (!payload?.rpContext) {
+  if (!payload?.rpContext || !payload.bindingNonce || !payload.signal) {
     throw new Error("World ID proof request could not be prepared.");
   }
 
-  return payload.rpContext;
+  return { rpContext: payload.rpContext, bindingNonce: payload.bindingNonce, signal: payload.signal };
 }
 
 function worldAccountCheckErrorMessage(error: unknown): string {
@@ -508,6 +516,7 @@ export default function ComposeFlow() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [text, setText] = useState("");
+  const [tweetUrl, setTweetUrl] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isWorldApp, setIsWorldApp] = useState(false);
@@ -784,10 +793,16 @@ export default function ComposeFlow() {
   }, [proofResult]);
 
   useEffect(() => {
-    const canNavigateToX = Boolean(proofResult && isSavedProofVisibleForDraft(proofResult, text));
-    allowPostProofNavigationRef.current = canNavigateToX;
-    (window as EarlyNavigationWindow).__veripostAllowPostProofNavigation = canNavigateToX;
-  }, [proofResult, text]);
+    // The guard's capture-phase click handler runs before an anchor's onClick,
+    // so the allowance must already be set while composing. Only ever unlocks
+    // x.com/intent/tweet (see isAllowedPostProofNavigation); other targets stay
+    // blocked. We keep beforeunload protection by not unlocking mid-proof.
+    const canShareProof = Boolean(proofResult && isSavedProofVisibleForDraft(proofResult, text));
+    const canPostFirst = phase === "ready" || phase === "proof_ready" || phase === "error";
+    const allow = canShareProof || canPostFirst;
+    allowPostProofNavigationRef.current = allow;
+    (window as EarlyNavigationWindow).__veripostAllowPostProofNavigation = allow;
+  }, [proofResult, text, phase]);
 
   useEffect(() => {
     if (!config) return;
@@ -828,19 +843,32 @@ export default function ComposeFlow() {
   const charactersLeft = (config?.maxPostTextLength ?? 220) - normalizedLength;
   const busy = phase === "verifying_world" || phase === "creating_proof";
   const canShowLastProof = Boolean(isSavedProofVisibleForDraft(proofResult, text));
+  const parsedTweet = useMemo(() => parseTweetUrl(tweetUrl), [tweetUrl]);
+  const xTextIntentUrl = useMemo(
+    () => (validation.ok ? buildXTextIntentUrl(validation.normalized) : null),
+    [validation],
+  );
   const canPost = Boolean(
       config?.hasWorldConfig &&
       config?.hasProofStorageConfig &&
       validation.ok &&
+      parsedTweet &&
       phase !== "loading" &&
       !busy,
   );
   const postButtonLabel =
     phase === "verifying_world"
-      ? "Checking World"
+      ? "Verifying post"
       : phase === "creating_proof"
         ? "Creating proof"
-        : "Post";
+        : "Verify post & create proof";
+
+  const handlePostOnX = useCallback(() => {
+    // Permit this one external navigation to x.com/intent/tweet so the user can
+    // post first; the proof is then bound to the resulting tweet.
+    allowPostProofNavigationRef.current = true;
+    (window as EarlyNavigationWindow).__veripostAllowPostProofNavigation = true;
+  }, []);
   const showWorldRuntimeDiagnostics = shouldShowWorldRuntimeDiagnostics(
     worldRuntimeDiagnostics,
     phase,
@@ -863,8 +891,15 @@ export default function ComposeFlow() {
       return;
     }
 
+    const nextTweet = parseTweetUrl(tweetUrl);
+    if (!nextTweet) {
+      setError("Paste the link to your X post (x.com/<you>/status/…) before creating a proof.");
+      setPhase("error");
+      return;
+    }
+
     setError("");
-    setNotice("Preparing in-app World ID proof.");
+    setNotice("Verifying your X post, then preparing the in-app World ID proof.");
     setPhase("verifying_world");
 
     try {
@@ -898,6 +933,7 @@ export default function ComposeFlow() {
         },
         body: JSON.stringify({
           draftText: nextValidation.normalized,
+          tweetUrl,
         }),
       });
 
@@ -905,22 +941,16 @@ export default function ComposeFlow() {
         throw new Error(await readApiError(rpContextResponse));
       }
 
+      const { rpContext, bindingNonce, signal } = await readWorldIdKitRpContext(rpContextResponse);
+
       recordWorldRuntimeDiagnostics("world_idkit_native_started", getWorldRuntimeDiagnostics());
       const idkitResponse = await requestNativeWorldIdKitProof({
         action: config.action,
         appId: config.appId,
         environment: config.environment,
-        rpContext: await readWorldIdKitRpContext(rpContextResponse),
-        signal: nextValidation.signal,
+        rpContext,
+        signal,
       });
-
-      const worldProofPayload = {
-        flow: WORLD_MINIAPP_AUTH_FLOW,
-        body: {
-          draftText: nextValidation.normalized,
-          idkitResponse,
-        },
-      };
 
       setPhase("creating_proof");
       setNotice("");
@@ -932,9 +962,14 @@ export default function ComposeFlow() {
         headers: {
           "content-type": "application/json",
           "x-veripost-runtime-session": WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID,
-          "x-veripost-world-app-flow": worldProofPayload.flow,
+          "x-veripost-world-app-flow": WORLD_MINIAPP_AUTH_FLOW,
         },
-        body: JSON.stringify(worldProofPayload.body),
+        body: JSON.stringify({
+          draftText: nextValidation.normalized,
+          tweetUrl,
+          bindingNonce,
+          idkitResponse,
+        }),
       });
 
       if (!proofResponse.ok) {
@@ -943,7 +978,7 @@ export default function ComposeFlow() {
 
       const savedProof = (await proofResponse.json()) as SavedProofResult;
       setProofResult(savedProof);
-      setNotice("Proof ready. Post to X when you are ready.");
+      setNotice("Proof ready and bound to your X post.");
       setPhase("proof_ready");
       recordWorldRuntimeDiagnostics("world_proof_ready", getWorldRuntimeDiagnostics(), undefined, "proof_ready");
     } catch (postError) {
@@ -963,7 +998,7 @@ export default function ComposeFlow() {
       setError(nextError);
       setPhase("error");
     }
-  }, [config, recordWorldRuntimeDiagnostics, reportPendingDiagnosticsIfNeeded, text]);
+  }, [config, recordWorldRuntimeDiagnostics, reportPendingDiagnosticsIfNeeded, text, tweetUrl]);
 
   const handlePrimaryAction = useCallback(() => {
     startPost();
@@ -1008,6 +1043,60 @@ export default function ComposeFlow() {
           />
 
           {!validation.ok && phase !== "loading" ? <p className="mt-3 text-sm text-[var(--muted)]">{validation.message}</p> : null}
+
+          <ol className="mt-6 space-y-4">
+            <li>
+              <p className="text-sm font-black">1. Post it on X</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                Post your text on X first, then copy the link to that post.
+              </p>
+              {xTextIntentUrl ? (
+                <a
+                  className="secondary-button mt-3 px-4 text-sm"
+                  href={xTextIntentUrl}
+                  onClick={handlePostOnX}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Post on X
+                </a>
+              ) : null}
+            </li>
+            <li>
+              <label className="text-sm font-black" htmlFor="tweet-url">
+                2. Paste your X post link
+              </label>
+              <input
+                id="tweet-url"
+                className="field mt-2 p-3 text-base"
+                inputMode="url"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="https://x.com/you/status/123…"
+                value={tweetUrl}
+                disabled={busy || phase === "loading"}
+                onChange={(event) => {
+                  setTweetUrl(event.target.value);
+                  if (phase === "error") {
+                    setPhase("ready");
+                    setError("");
+                  }
+                }}
+              />
+              {tweetUrl && !parsedTweet ? (
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  That doesn&apos;t look like an X post link (x.com/&lt;you&gt;/status/…).
+                </p>
+              ) : null}
+            </li>
+            <li>
+              <p className="text-sm font-black">3. Create the bound proof</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                VeriPost checks your post is real, by your account, then binds a World ID proof to it.
+              </p>
+            </li>
+          </ol>
         </section>
 
         {!isWorldApp && phase !== "loading" ? (
@@ -1076,16 +1165,19 @@ export default function ComposeFlow() {
 
         {proofResult && canShowLastProof ? (
           <section className="surface mt-5 p-4">
-            <p className="text-sm font-black text-[var(--accent)]">Last proof is ready</p>
+            <p className="text-sm font-black text-[var(--accent)]">Proof is ready</p>
+            {proofResult.proof.xHandle ? (
+              <p className="mt-1 text-sm font-bold text-[var(--muted)]">Bound to @{proofResult.proof.xHandle}&apos;s X post</p>
+            ) : null}
             <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-[var(--muted)]">
               {proofResult.proof.draftText}
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <a className="secondary-button px-4 text-sm" href={proofResult.proofUrl}>
-                Proof
+                View proof
               </a>
-              <a className="secondary-button px-4 text-sm" href={proofResult.tweetIntentUrl}>
-                Post to X
+              <a className="secondary-button px-4 text-sm" href={proofResult.tweetUrl} target="_blank" rel="noreferrer">
+                View X post
               </a>
             </div>
           </section>

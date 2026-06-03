@@ -15,6 +15,11 @@ export type ProofClaim = {
   signal: string;
   signalHash: string;
   proofCommitment: string;
+  // The verified X post this proof is bound to. `xHandle` is the tweet author
+  // (lowercased, no @); `tweetId` makes the proof one-to-one with a single post.
+  // Older proofs created before tweet binding may omit these.
+  xHandle?: string;
+  tweetId?: string;
   xUsername?: string;
   nullifierDecimal: string;
   worldVerification: {
@@ -41,6 +46,8 @@ export type CreateProofInput = {
   draftHash: string;
   signal: string;
   signalHash: string;
+  xHandle?: string;
+  tweetId?: string;
   xUsername?: string;
   nullifierDecimal: string;
   worldVerification: ProofClaim["worldVerification"];
@@ -140,13 +147,22 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
   }
 
   const store = await readProofStore();
-  const duplicate = store.proofs.find(
-    (proof) => proof.nullifierDecimal === input.nullifierDecimal && proof.draftHash === input.draftHash,
-  );
+
+  // One proof per tweet: a post can only be claimed once, and only refreshed by
+  // the same World ID identity that first proved it.
+  const duplicate = input.tweetId
+    ? store.proofs.find((proof) => proof.tweetId === input.tweetId)
+    : store.proofs.find(
+        (proof) => proof.nullifierDecimal === input.nullifierDecimal && proof.draftHash === input.draftHash,
+      );
 
   if (duplicate) {
+    if (input.tweetId && duplicate.nullifierDecimal !== input.nullifierDecimal) {
+      throw new ApiError(409, "tweet_already_proven", "This X post already has a VeriPost proof.");
+    }
     duplicate.updatedAt = now;
-    duplicate.xUsername = input.xUsername;
+    duplicate.xHandle = input.xHandle ?? duplicate.xHandle;
+    duplicate.xUsername = input.xUsername ?? duplicate.xUsername;
     duplicate.worldVerification = input.worldVerification;
     await writeProofStore(store);
     return { proof: toPublicProof(duplicate), createdNew: false };
@@ -163,6 +179,8 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
     signal: input.signal,
     signalHash: input.signalHash,
     proofCommitment: createProofCommitment(id, input.nullifierDecimal, input.draftHash),
+    xHandle: input.xHandle,
+    tweetId: input.tweetId,
     xUsername: input.xUsername,
     nullifierDecimal: input.nullifierDecimal,
     worldVerification: input.worldVerification,
@@ -188,5 +206,20 @@ export async function getPublicProof(id: string): Promise<PublicProof | null> {
 
   const store = await readProofStore();
   const proof = store.proofs.find((item) => item.id === id);
+  return proof ? toPublicProof(proof) : null;
+}
+
+export async function getPublicProofByTweetId(tweetId: string): Promise<PublicProof | null> {
+  if (!/^\d{1,25}$/.test(tweetId)) return null;
+
+  if (shouldUsePostgres()) {
+    const { pgGetByTweetId } = await import("@/lib/proofs-pg");
+    const stored = await pgGetByTweetId(tweetId);
+    return stored ? toPublicProof(stored) : null;
+  }
+
+  const store = await readProofStore();
+  // Newest matching proof wins if older un-bound duplicates somehow exist.
+  const proof = [...store.proofs].reverse().find((item) => item.tweetId === tweetId);
   return proof ? toPublicProof(proof) : null;
 }

@@ -8,12 +8,13 @@ import {
   missingWorldConfig,
 } from "@/lib/config";
 import { ApiError, errorResponse } from "@/lib/http";
+import { buildBoundSignal, verifyBindingNonce } from "@/lib/proof-binding";
 import { createOrRefreshProof } from "@/lib/proofs";
-import { rateLimitRequest } from "@/lib/rate-limit";
+import { rateLimitByIdentity, rateLimitRequest } from "@/lib/rate-limit";
 import { assertJsonRequest, assertSameOriginRequest } from "@/lib/request-security";
-import { buildXIntentUrl } from "@/lib/x";
 import { validatePostText } from "@/lib/text";
 import { hashSignalToField } from "@/lib/world-signal";
+import { canonicalTweetUrl, parseTweetUrl } from "@/lib/x-tweet";
 import { idKitResultSchema, verifyWorldIdKitProof } from "@/lib/world-idkit-server";
 import {
   WORLD_MINIAPP_AUTH_FLOW,
@@ -26,6 +27,8 @@ const WORLD_RUNTIME_SESSION_HEADER = "x-veripost-runtime-session";
 
 const worldIdKitProofSchema = z.object({
   draftText: z.string(),
+  tweetUrl: z.string().trim().min(1).max(400),
+  bindingNonce: z.string().trim().min(1).max(2_048),
   idkitResponse: idKitResultSchema,
 }).strict();
 
@@ -49,6 +52,21 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     rateLimitRequest(request, "proofs:create", { limit: 12, windowMs: 60_000 });
 
+    const tweet = parseTweetUrl(body.tweetUrl);
+    if (!tweet) {
+      throw new ApiError(400, "tweet_url_invalid", "Paste the link to your X post (x.com/<you>/status/…).");
+    }
+
+    // The binding nonce was minted server-side only after the tweet was verified
+    // (author + text) at rp-context time. Re-checking it here proves the World ID
+    // proof commits to THIS post by THIS account — recompute the signal from it.
+    verifyBindingNonce(body.bindingNonce, {
+      draftHash: text.draftHash,
+      xHandle: tweet.handle,
+      tweetId: tweet.tweetId,
+    });
+    const signal = buildBoundSignal(body.bindingNonce);
+
     const config = getWorldServerConfig(getRequestOrigin(request));
     const missingWorld = missingWorldConfig(config);
     if (missingWorld.length > 0) {
@@ -57,16 +75,24 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
     }
 
-    const signalHash = hashSignalToField(text.signal);
-    const worldVerification = await verifyWorldIdKitProof(config, body.idkitResponse, text.signal);
+    const signalHash = hashSignalToField(signal);
+    const worldVerification = await verifyWorldIdKitProof(config, body.idkitResponse, signal);
+
+    // Sybil bound: cap how many distinct posts one verified human can prove.
+    rateLimitByIdentity(worldVerification.nullifierDecimal, "proofs:nullifier", {
+      limit: 25,
+      windowMs: 24 * 60 * 60 * 1000,
+    });
 
     const result = await createOrRefreshProof({
       action: config.action,
       environment: config.environment,
       draftText: text.normalized,
       draftHash: text.draftHash,
-      signal: text.signal,
+      signal,
       signalHash,
+      xHandle: tweet.handle,
+      tweetId: tweet.tweetId,
       nullifierDecimal: worldVerification.nullifierDecimal,
       worldVerification: {
         verifiedAt: worldVerification.verifiedAt,
@@ -80,7 +106,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const response = NextResponse.json({
       proof: result.proof,
       proofUrl,
-      tweetIntentUrl: buildXIntentUrl(text.normalized, proofUrl),
+      tweetUrl: canonicalTweetUrl(tweet),
       createdNew: result.createdNew,
     });
     return response;

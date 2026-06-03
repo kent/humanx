@@ -60,13 +60,29 @@ export default async function ProofPage({ params }: PageProps) {
             <p className="text-sm font-black">World ID verified</p>
           </div>
 
-          {proof.xUsername ? (
+          {proof.xHandle && proof.tweetId ? (
+            <p className="mt-3 text-sm font-bold text-[var(--muted)]">
+              Bound to{" "}
+              <a
+                className="underline"
+                href={`https://x.com/${proof.xHandle}/status/${proof.tweetId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                @{proof.xHandle}&apos;s X post
+              </a>
+            </p>
+          ) : proof.xUsername ? (
             <p className="mt-3 text-sm font-bold text-[var(--muted)]">X account @{proof.xUsername}</p>
           ) : null}
 
           <blockquote className="mt-5 whitespace-pre-wrap rounded-lg border border-[var(--line)] bg-white p-4 text-base leading-7">
             {proof.draftText}
           </blockquote>
+          <p className="mt-2 text-xs text-[var(--muted)]">
+            The X post must match this text exactly. Anyone can verify at{" "}
+            <span className="mono">/api/verify?tweet=&lt;link&gt;</span>.
+          </p>
 
           <dl className="mt-5 grid gap-3 text-sm">
             <div className="flex items-center justify-between gap-4">

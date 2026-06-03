@@ -10,8 +10,31 @@ export type TextValidation =
   | { ok: true; normalized: string; draftHash: string; signal: string }
   | { ok: false; code: "empty_text" | "text_too_long"; message: string };
 
+// Removes characters that are invisible to a human reader but would change the
+// hash: C0/C1 control chars (keeping tab 0x09, newline 0x0A, carriage return
+// 0x0D), DEL, soft hyphen, bidi marks, zero-width chars/joiners, word joiner,
+// and BOM. Done by code point so the source stays plain ASCII.
+function stripInvisibleChars(input: string): string {
+  let out = "";
+  for (const ch of input) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (code === 0x09 || code === 0x0a || code === 0x0d) {
+      out += ch;
+      continue;
+    }
+    if (code <= 0x1f || code === 0x7f) continue;
+    if (code === 0x00ad) continue; // soft hyphen
+    if (code >= 0x200b && code <= 0x200f) continue; // zero-width + bidi marks
+    if (code === 0x2060 || code === 0xfeff) continue; // word joiner, BOM/ZWNBSP
+    out += ch;
+  }
+  return out;
+}
+
 export function normalizePostText(input: string): string {
-  return input
+  // Canonicalize composed characters so visually identical text hashes alike,
+  // then strip invisibles before whitespace normalization.
+  return stripInvisibleChars(input.normalize("NFC"))
     .replace(/\r\n?/g, "\n")
     .split("\n")
     .map((line) => line.replace(/[ \t]+/g, " ").trim())
