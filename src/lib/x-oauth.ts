@@ -1,18 +1,19 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { ApiError } from "@/lib/http";
 
-// X (Twitter) OAuth 2.0 with PKCE. Proves the user CONTROLS an @handle, so the
-// handle bound into a proof is cryptographically attested rather than merely
-// asserted. Entirely optional: when X_CLIENT_ID/X_CLIENT_SECRET are unset the
-// proof flow falls back to oEmbed-only tweet binding.
+// X (Twitter) OAuth 2.0 with PKCE. Proves the user CONTROLS an @handle, and —
+// with tweet.write — lets VeriPost post the tweet on the user's behalf and
+// capture the tweet id automatically (no copy/paste). Optional: when
+// X_CLIENT_ID/X_CLIENT_SECRET are unset the flow falls back to oEmbed binding.
 
-const AUTHORIZE_URL = "https://twitter.com/i/oauth2/authorize";
-const TOKEN_URL = "https://api.twitter.com/2/oauth2/token";
-const USERS_ME_URL = "https://api.twitter.com/2/users/me";
-const SCOPES = ["tweet.read", "users.read"];
-const SESSION_TTL_MS = 60 * 60 * 1000; // 1h verified-X session
-const FLOW_TTL_MS = 10 * 60 * 1000; // 10m to complete the redirect
+const AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
+const TOKEN_URL = "https://api.x.com/2/oauth2/token";
+const USERS_ME_URL = "https://api.x.com/2/users/me";
+const POST_TWEET_URL = "https://api.x.com/2/tweets";
+const SCOPES = ["tweet.read", "tweet.write", "users.read"];
+const SESSION_TTL_MS = 60 * 60 * 1000;
+const FLOW_TTL_MS = 10 * 60 * 1000;
 export const X_SESSION_COOKIE = "vp_x_session";
 export const X_FLOW_COOKIE = "vp_x_flow";
 
@@ -25,6 +26,7 @@ export type XOAuthConfig = {
 export type VerifiedXAccount = {
   xUserId: string;
   handle: string; // lowercased, no @
+  accessToken: string;
 };
 
 export function getXOAuthConfig(appUrl: string): XOAuthConfig | null {
@@ -48,6 +50,10 @@ function getSecret(): string {
   return secret;
 }
 
+function key32(): Buffer {
+  return createHash("sha256").update(getSecret()).digest();
+}
+
 function base64url(input: Buffer | string): string {
   return Buffer.from(input).toString("base64url");
 }
@@ -62,13 +68,30 @@ function safeEqual(a: string, b: string): boolean {
   return aB.length === bB.length && timingSafeEqual(aB, bB);
 }
 
-// --- PKCE + signed flow state (carried in a short-lived cookie) ---
+// Authenticated encryption for the access token at rest in the cookie.
+function encryptToken(token: string): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key32(), iv);
+  const enc = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString("base64url")}.${enc.toString("base64url")}.${tag.toString("base64url")}`;
+}
 
-export type XFlowState = {
-  state: string;
-  codeVerifier: string;
-  returnTo: string;
-};
+function decryptToken(value: string): string | null {
+  const [ivB, encB, tagB] = value.split(".");
+  if (!ivB || !encB || !tagB) return null;
+  try {
+    const decipher = createDecipheriv("aes-256-gcm", key32(), Buffer.from(ivB, "base64url"));
+    decipher.setAuthTag(Buffer.from(tagB, "base64url"));
+    return Buffer.concat([decipher.update(Buffer.from(encB, "base64url")), decipher.final()]).toString("utf8");
+  } catch {
+    return null;
+  }
+}
+
+// --- PKCE + signed flow state ---
+
+export type XFlowState = { state: string; codeVerifier: string; returnTo: string };
 
 export function createXFlow(returnTo: string, now: number = Date.now()): {
   flow: XFlowState;
@@ -115,10 +138,15 @@ export function parseXFlowCookie(value: string | undefined, now: number = Date.n
   return { state: payload.state, codeVerifier: payload.codeVerifier, returnTo: payload.returnTo };
 }
 
-// --- Verified-X session cookie (set after a successful callback) ---
+// --- Verified-X session cookie (handle + encrypted access token) ---
 
 export function createXSessionCookie(account: VerifiedXAccount, now: number = Date.now()): string {
-  const body = base64url(JSON.stringify({ ...account, exp: now + SESSION_TTL_MS }));
+  const body = base64url(JSON.stringify({
+    xUserId: account.xUserId,
+    handle: account.handle,
+    tok: encryptToken(account.accessToken),
+    exp: now + SESSION_TTL_MS,
+  }));
   return `${body}.${sign(body)}`;
 }
 
@@ -130,18 +158,20 @@ export function readXSessionCookie(
   const [body, mac] = value.split(".");
   if (!body || !mac || !safeEqual(mac, sign(body))) return null;
   try {
-    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as VerifiedXAccount & {
-      exp: number;
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as {
+      xUserId?: string; handle?: string; tok?: string; exp?: number;
     };
     if (typeof payload.exp !== "number" || payload.exp < now) return null;
-    if (!payload.xUserId || !payload.handle) return null;
-    return { xUserId: payload.xUserId, handle: payload.handle.toLowerCase() };
+    if (!payload.xUserId || !payload.handle || !payload.tok) return null;
+    const accessToken = decryptToken(payload.tok);
+    if (!accessToken) return null;
+    return { xUserId: payload.xUserId, handle: payload.handle.toLowerCase(), accessToken };
   } catch {
     return null;
   }
 }
 
-// --- Token exchange + identity (network) ---
+// --- Token exchange + identity + posting (network) ---
 
 export async function exchangeXCodeForAccount(
   config: XOAuthConfig,
@@ -197,7 +227,42 @@ export async function exchangeXCodeForAccount(
   if (!me?.data?.id || !me.data.username) {
     throw new ApiError(401, "x_identity_failed", "X did not return your account.");
   }
-  return { xUserId: me.data.id, handle: me.data.username.toLowerCase() };
+  return { xUserId: me.data.id, handle: me.data.username.toLowerCase(), accessToken: token.access_token };
+}
+
+export type PostedTweet = { tweetId: string };
+
+export async function postTweetAsUser(
+  accessToken: string,
+  text: string,
+  fetcher: typeof fetch = fetch,
+): Promise<PostedTweet> {
+  let response: Response;
+  try {
+    response = await fetcher(POST_TWEET_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ text }),
+    });
+  } catch (error) {
+    throw new ApiError(502, "x_post_unreachable", "Could not reach X to publish your post.", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+  if (response.status === 403) {
+    throw new ApiError(403, "x_post_forbidden", "X rejected the post. Your X app needs Read and Write access.");
+  }
+  if (!response.ok) {
+    throw new ApiError(502, "x_post_failed", "X could not publish your post. Try again.");
+  }
+  const payload = (await response.json().catch(() => null)) as { data?: { id?: string } } | null;
+  if (!payload?.data?.id || !/^\d{1,25}$/.test(payload.data.id)) {
+    throw new ApiError(502, "x_post_failed", "X did not return the published post id.");
+  }
+  return { tweetId: payload.data.id };
 }
 
 export function assertXState(expected: string, received: string | null): void {

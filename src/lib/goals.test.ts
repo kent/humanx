@@ -103,7 +103,7 @@ describe("GOALS.md contract", () => {
     expect(composeFlow).toContain("preparing the in-app World ID proof");
     expect(composeFlow).toContain("Waiting for World App proof runtime.");
     expect(composeFlow).toContain("postButtonLabel");
-    expect(composeFlow).toContain("Verifying post");
+    expect(composeFlow).toContain("Posting to X");
     expect(composeFlow).toContain("Creating proof");
     expect(composeFlow).toContain('role="alert"');
     expect(composeFlow).toContain('role="status"');

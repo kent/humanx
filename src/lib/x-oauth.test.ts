@@ -7,6 +7,7 @@ import {
   exchangeXCodeForAccount,
   getXOAuthConfig,
   parseXFlowCookie,
+  postTweetAsUser,
   readXSessionCookie,
 } from "@/lib/x-oauth";
 
@@ -41,7 +42,7 @@ describe("x-oauth PKCE flow", () => {
   it("builds an authorize URL with a S256 challenge and round-trips the flow cookie", () => {
     const { authorizeUrl, cookieValue, flow } = createXFlow("/", 1_000);
     const url = new URL(authorizeUrl(config));
-    expect(url.origin + url.pathname).toBe("https://twitter.com/i/oauth2/authorize");
+    expect(url.origin + url.pathname).toBe("https://x.com/i/oauth2/authorize");
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
     expect(url.searchParams.get("state")).toBe(flow.state);
     expect(url.searchParams.get("client_id")).toBe("test-client");
@@ -66,9 +67,11 @@ describe("x-oauth PKCE flow", () => {
 });
 
 describe("x-oauth verified session", () => {
-  it("round-trips a signed session cookie and rejects tampering/expiry", () => {
-    const cookie = createXSessionCookie({ xUserId: "42", handle: "kentf" }, 1_000);
-    expect(readXSessionCookie(cookie, 1_000)).toEqual({ xUserId: "42", handle: "kentf" });
+  it("round-trips a signed session cookie (with encrypted token) and rejects tampering/expiry", () => {
+    const cookie = createXSessionCookie({ xUserId: "42", handle: "kentf", accessToken: "secret-token" }, 1_000);
+    expect(readXSessionCookie(cookie, 1_000)).toEqual({ xUserId: "42", handle: "kentf", accessToken: "secret-token" });
+    // The access token must not appear in plaintext in the cookie.
+    expect(cookie).not.toContain("secret-token");
     expect(readXSessionCookie(cookie, 1_000 + 2 * 60 * 60 * 1000)).toBeNull();
     const [body] = cookie.split(".");
     expect(readXSessionCookie(`${body}.bad`)).toBeNull();
@@ -86,7 +89,7 @@ describe("x-oauth code exchange", () => {
     });
 
     const account = await exchangeXCodeForAccount(config, "code", "verifier", fetcher as typeof fetch);
-    expect(account).toEqual({ xUserId: "999", handle: "kentf" });
+    expect(account).toEqual({ xUserId: "999", handle: "kentf", accessToken: "tok" });
   });
 
   it("fails closed when the token endpoint rejects", async () => {
@@ -94,5 +97,22 @@ describe("x-oauth code exchange", () => {
     await expect(
       exchangeXCodeForAccount(config, "code", "verifier", fetcher as typeof fetch),
     ).rejects.toThrow("could not be completed");
+  });
+});
+
+describe("postTweetAsUser", () => {
+  it("posts via the X API and returns the tweet id", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({ data: { id: "1799999999999999999" } }), { status: 201 }));
+    const result = await postTweetAsUser("tok", "hello world", fetcher as typeof fetch);
+    expect(result).toEqual({ tweetId: "1799999999999999999" });
+    const call = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    const init = call[1];
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer tok");
+    expect(JSON.parse(String(init.body))).toEqual({ text: "hello world" });
+  });
+
+  it("maps a 403 to a Read-and-Write guidance error", async () => {
+    const fetcher = vi.fn(async () => new Response("forbidden", { status: 403 }));
+    await expect(postTweetAsUser("tok", "hi", fetcher as typeof fetch)).rejects.toThrow("Read and Write");
   });
 });

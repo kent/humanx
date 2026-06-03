@@ -11,6 +11,7 @@ const verifyWorldIdKitProofMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/proofs", () => ({
   createOrRefreshProof: createOrRefreshProofMock,
+  createProofId: () => "vp_idkit",
 }));
 
 vi.mock("@/lib/world-idkit-server", async (importOriginal) => {

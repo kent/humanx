@@ -40,6 +40,9 @@ export type ProofStore = {
 };
 
 export type CreateProofInput = {
+  // Optional pre-generated id so callers can know the proof URL before storage
+  // (e.g. to embed it in the tweet they post on the user's behalf).
+  id?: string;
   action: string;
   environment: WorldEnvironment;
   draftText: string;
@@ -140,7 +143,7 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
 
   if (shouldUsePostgres()) {
     const { pgUpsertProof } = await import("@/lib/proofs-pg");
-    const id = createProofId();
+    const id = input.id ?? createProofId();
     const commitment = createProofCommitment(id, input.nullifierDecimal, input.draftHash);
     const result = await pgUpsertProof({ ...input, id, proofCommitment: commitment, now });
     return { proof: toPublicProof(result.proof), createdNew: result.createdNew };
@@ -168,7 +171,7 @@ export async function createOrRefreshProof(input: CreateProofInput): Promise<{
     return { proof: toPublicProof(duplicate), createdNew: false };
   }
 
-  const id = createProofId();
+  const id = input.id ?? createProofId();
   const proof: StoredProofClaim = {
     id,
     version: 1,

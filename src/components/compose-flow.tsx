@@ -850,22 +850,23 @@ export default function ComposeFlow() {
     () => (validation.ok ? buildXTextIntentUrl(validation.normalized) : null),
     [validation],
   );
-  const xConnectSatisfied = !config?.requiresXConnect || Boolean(config?.xConnectedHandle);
+  const requiresXConnect = Boolean(config?.requiresXConnect);
+  const xConnectSatisfied = !requiresXConnect || Boolean(config?.xConnectedHandle);
   const canPost = Boolean(
       config?.hasWorldConfig &&
       config?.hasProofStorageConfig &&
       validation.ok &&
-      parsedTweet &&
+      (requiresXConnect ? true : parsedTweet) &&
       xConnectSatisfied &&
       phase !== "loading" &&
       !busy,
   );
   const postButtonLabel =
     phase === "verifying_world"
-      ? "Verifying post"
+      ? "Verifying"
       : phase === "creating_proof"
-        ? "Creating proof"
-        : "Verify post & create proof";
+        ? requiresXConnect ? "Posting to X" : "Creating proof"
+        : requiresXConnect ? "Verify & post to X" : "Verify post & create proof";
 
   const handlePostOnX = useCallback(() => {
     // Permit this one external navigation to x.com/intent/tweet so the user can
@@ -895,15 +896,17 @@ export default function ComposeFlow() {
       return;
     }
 
-    const nextTweet = parseTweetUrl(tweetUrl);
-    if (!nextTweet) {
+    const needsPastedTweet = !config.requiresXConnect;
+    if (needsPastedTweet && !parseTweetUrl(tweetUrl)) {
       setError("Paste the link to your X post (x.com/<you>/status/…) before creating a proof.");
       setPhase("error");
       return;
     }
 
     setError("");
-    setNotice("Verifying your X post, then preparing the in-app World ID proof.");
+    setNotice(needsPastedTweet
+      ? "Verifying your X post, then preparing the in-app World ID proof."
+      : "Preparing the in-app World ID proof. VeriPost posts to X only after it verifies.");
     setPhase("verifying_world");
 
     try {
@@ -935,10 +938,11 @@ export default function ComposeFlow() {
           "x-veripost-runtime-session": WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID,
           "x-veripost-world-app-flow": WORLD_MINIAPP_AUTH_FLOW,
         },
-        body: JSON.stringify({
-          draftText: nextValidation.normalized,
-          tweetUrl,
-        }),
+        body: JSON.stringify(
+          needsPastedTweet
+            ? { draftText: nextValidation.normalized, tweetUrl }
+            : { draftText: nextValidation.normalized },
+        ),
       });
 
       if (!rpContextResponse.ok) {
@@ -968,12 +972,11 @@ export default function ComposeFlow() {
           "x-veripost-runtime-session": WORLD_RUNTIME_DIAGNOSTIC_SESSION_ID,
           "x-veripost-world-app-flow": WORLD_MINIAPP_AUTH_FLOW,
         },
-        body: JSON.stringify({
-          draftText: nextValidation.normalized,
-          tweetUrl,
-          bindingNonce,
-          idkitResponse,
-        }),
+        body: JSON.stringify(
+          needsPastedTweet
+            ? { draftText: nextValidation.normalized, tweetUrl, bindingNonce, idkitResponse }
+            : { draftText: nextValidation.normalized, bindingNonce, idkitResponse },
+        ),
       });
 
       if (!proofResponse.ok) {
@@ -1069,59 +1072,66 @@ export default function ComposeFlow() {
             </div>
           ) : null}
 
-          <ol className="mt-6 space-y-4">
-            <li>
-              <p className="text-sm font-black">1. Post it on X</p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                Post your text on X first, then copy the link to that post.
-              </p>
-              {xTextIntentUrl ? (
-                <a
-                  className="secondary-button mt-3 px-4 text-sm"
-                  href={xTextIntentUrl}
-                  onClick={handlePostOnX}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Post on X
-                </a>
-              ) : null}
-            </li>
-            <li>
-              <label className="text-sm font-black" htmlFor="tweet-url">
-                2. Paste your X post link
-              </label>
-              <input
-                id="tweet-url"
-                className="field mt-2 p-3 text-base"
-                inputMode="url"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="https://x.com/you/status/123…"
-                value={tweetUrl}
-                disabled={busy || phase === "loading"}
-                onChange={(event) => {
-                  setTweetUrl(event.target.value);
-                  if (phase === "error") {
-                    setPhase("ready");
-                    setError("");
-                  }
-                }}
-              />
-              {tweetUrl && !parsedTweet ? (
-                <p className="mt-2 text-sm text-[var(--muted)]">
-                  That doesn&apos;t look like an X post link (x.com/&lt;you&gt;/status/…).
+          {requiresXConnect ? (
+            <p className="mt-4 text-sm text-[var(--muted)]">
+              When you tap below, VeriPost verifies your World ID first, then posts this to X for you
+              with the proof link attached — so anyone who sees it knows a verified human posted it.
+            </p>
+          ) : (
+            <ol className="mt-6 space-y-4">
+              <li>
+                <p className="text-sm font-black">1. Post it on X</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Post your text on X first, then copy the link to that post.
                 </p>
-              ) : null}
-            </li>
-            <li>
-              <p className="text-sm font-black">3. Create the bound proof</p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                VeriPost checks your post is real, by your account, then binds a World ID proof to it.
-              </p>
-            </li>
-          </ol>
+                {xTextIntentUrl ? (
+                  <a
+                    className="secondary-button mt-3 px-4 text-sm"
+                    href={xTextIntentUrl}
+                    onClick={handlePostOnX}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Post on X
+                  </a>
+                ) : null}
+              </li>
+              <li>
+                <label className="text-sm font-black" htmlFor="tweet-url">
+                  2. Paste your X post link
+                </label>
+                <input
+                  id="tweet-url"
+                  className="field mt-2 p-3 text-base"
+                  inputMode="url"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="https://x.com/you/status/123…"
+                  value={tweetUrl}
+                  disabled={busy || phase === "loading"}
+                  onChange={(event) => {
+                    setTweetUrl(event.target.value);
+                    if (phase === "error") {
+                      setPhase("ready");
+                      setError("");
+                    }
+                  }}
+                />
+                {tweetUrl && !parsedTweet ? (
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    That doesn&apos;t look like an X post link (x.com/&lt;you&gt;/status/…).
+                  </p>
+                ) : null}
+              </li>
+              <li>
+                <p className="text-sm font-black">3. Create the bound proof</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  VeriPost checks your post is real, by your account, then binds a World ID proof to it.
+                </p>
+              </li>
+            </ol>
+          )}
         </section>
 
         {!isWorldApp && phase !== "loading" ? (

@@ -13,16 +13,6 @@ import { validatePostText } from "@/lib/text";
 import { createWorldIdKitRpContext } from "@/lib/world-idkit-server";
 import { isXOAuthConfigured, readXSessionCookie, X_SESSION_COOKIE } from "@/lib/x-oauth";
 import { verifyPostedTweet } from "@/lib/x-tweet";
-
-function readCookie(request: Request, name: string): string | undefined {
-  const raw = request.headers.get("cookie") ?? "";
-  const match = raw
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${name}=`));
-  if (!match) return undefined;
-  return decodeURIComponent(match.slice(name.length + 1));
-}
 import {
   WORLD_MINIAPP_AUTH_FLOW,
   WORLD_MINIAPP_AUTH_HEADER,
@@ -32,8 +22,17 @@ export const runtime = "nodejs";
 
 const rpContextRequestSchema = z.object({
   draftText: z.string(),
-  tweetUrl: z.string().trim().min(1).max(400),
+  tweetUrl: z.string().trim().min(1).max(400).optional(),
 }).strict();
+
+function readCookie(request: Request, name: string): string | undefined {
+  const raw = request.headers.get("cookie") ?? "";
+  const match = raw
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : undefined;
+}
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -49,43 +48,37 @@ export async function POST(request: Request): Promise<NextResponse> {
     const body = rpContextRequestSchema.parse(await request.json());
     const text = validatePostText(body.draftText);
     if (!text.ok) {
-      return NextResponse.json({
-        error: {
-          code: text.code,
-          message: text.message,
-        },
-      }, { status: 400 });
+      return NextResponse.json({ error: { code: text.code, message: text.message } }, { status: 400 });
     }
 
-    // Verify the tweet exists, was authored by the handle in its link, and that
-    // its text matches the post being proved. Only then mint a binding nonce
-    // sealing (draftHash, handle, tweetId) for the World ID proof to commit to.
-    const verifiedTweet = await verifyPostedTweet(body.tweetUrl, text.normalized, {
-      requireTextMatch: true,
-    });
-
-    // When X OAuth is configured, require a verified X session and confirm the
-    // connected account actually authored the tweet — proving handle control.
-    // The OAuth-verified numeric user id is then bound into the proof signal.
-    // Without OAuth we fall back to the tweet author handle (oEmbed-only).
-    let xUserId = verifiedTweet.handle;
+    let bindingNonce: string;
     if (isXOAuthConfigured()) {
+      // Automated flow: the user has connected X; VeriPost will post the tweet
+      // itself after the proof. Bind the OAuth-verified account (no tweet yet).
       const session = readXSessionCookie(readCookie(request, X_SESSION_COOKIE));
       if (!session) {
         throw new ApiError(401, "x_not_connected", "Connect your X account before creating a proof.");
       }
-      if (session.handle !== verifiedTweet.handle) {
-        throw new ApiError(403, "x_handle_mismatch", "That X post was not authored by your connected X account.");
+      bindingNonce = issueBindingNonce({
+        draftHash: text.draftHash,
+        xHandle: session.handle,
+        xUserId: session.xUserId,
+      });
+    } else {
+      // Fallback: the user posted manually and pasted the link; verify via oEmbed.
+      if (!body.tweetUrl) {
+        throw new ApiError(400, "tweet_url_required", "Paste the link to your X post.");
       }
-      xUserId = session.xUserId;
+      const verifiedTweet = await verifyPostedTweet(body.tweetUrl, text.normalized, {
+        requireTextMatch: true,
+      });
+      bindingNonce = issueBindingNonce({
+        draftHash: text.draftHash,
+        xHandle: verifiedTweet.handle,
+        tweetId: verifiedTweet.tweetId,
+        xUserId: verifiedTweet.handle,
+      });
     }
-
-    const bindingNonce = issueBindingNonce({
-      draftHash: text.draftHash,
-      xHandle: verifiedTweet.handle,
-      tweetId: verifiedTweet.tweetId,
-      xUserId,
-    });
 
     const config = getWorldServerConfig(getRequestOrigin(request));
     return NextResponse.json({

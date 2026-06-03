@@ -17,7 +17,9 @@ const NONCE_VERSION = "v2";
 export type ProofBindingFacts = {
   draftHash: string;
   xHandle: string; // lowercased, no leading @
-  tweetId: string;
+  // Present in the oEmbed/paste flow (tweet exists before the proof). Absent in
+  // the OAuth flow, where VeriPost posts the tweet after the proof succeeds.
+  tweetId?: string;
   // The X account id the handle resolves to. When X OAuth is configured this is
   // the OAuth-verified numeric user id (proves handle control); otherwise it
   // falls back to the handle (oEmbed-only binding).
@@ -103,10 +105,13 @@ export function verifyBindingNonce(
   if (typeof payload.exp !== "number" || payload.exp < now) {
     throw new ApiError(400, "proof_binding_expired", "Proof binding token has expired. Restart the proof.");
   }
+  const tweetIdMatches = expected.tweetId == null
+    ? true
+    : safeEqual(payload.tweetId ?? "", expected.tweetId);
   if (
     !safeEqual(payload.draftHash, expected.draftHash) ||
     !safeEqual(payload.xHandle, expected.xHandle) ||
-    !safeEqual(payload.tweetId, expected.tweetId)
+    !tweetIdMatches
   ) {
     throw new ApiError(400, "proof_binding_mismatch", "Proof binding does not match the submitted post.");
   }
