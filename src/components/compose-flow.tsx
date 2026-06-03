@@ -530,7 +530,9 @@ export default function ComposeFlow() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [text, setText] = useState("");
   const [tweetUrl, setTweetUrl] = useState("");
-  const [xLinkCode] = useState(createXLinkCode);
+  // Generated client-side (avoids SSR hydration mismatch) and persisted so it
+  // survives a webview reload while the user is away doing X OAuth.
+  const [xLinkCode, setXLinkCode] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isWorldApp, setIsWorldApp] = useState(false);
@@ -645,6 +647,25 @@ export default function ComposeFlow() {
   }, [recordWorldRuntimeDiagnostics]);
 
   useEffect(() => {
+    const KEY = "veripost:x-link-code";
+    let code: string;
+    try {
+      const existing = window.localStorage.getItem(KEY);
+      if (existing && /^[A-Za-z0-9_-]{16,64}$/.test(existing)) {
+        code = existing;
+      } else {
+        code = createXLinkCode();
+        window.localStorage.setItem(KEY, code);
+      }
+    } catch {
+      code = createXLinkCode();
+    }
+    // Client-only init from localStorage (unavailable during SSR/render).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setXLinkCode(code);
+  }, []);
+
+  useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
 
@@ -741,7 +762,7 @@ export default function ComposeFlow() {
   // one-time link code; the claim sets the verified-X session cookie on the
   // webview itself. Poll whenever the mini app is visible until connected.
   useEffect(() => {
-    if (!config?.requiresXConnect || config.xConnectedHandle) return;
+    if (!config?.requiresXConnect || config.xConnectedHandle || !xLinkCode) return;
 
     let cancelled = false;
     let attempts = 0;
@@ -1130,7 +1151,8 @@ export default function ComposeFlow() {
                   </p>
                   <a
                     className="secondary-button mt-3 px-4 text-sm"
-                    href={`/api/x-connect/start?lc=${encodeURIComponent(xLinkCode)}`}
+                    href={xLinkCode ? `/api/x-connect/start?lc=${encodeURIComponent(xLinkCode)}` : undefined}
+                    aria-disabled={!xLinkCode}
                   >
                     Connect X
                   </a>
