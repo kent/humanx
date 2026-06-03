@@ -57,7 +57,7 @@ export async function requestNativeWorldIdKitProof(input: NativeWorldIdKitProofI
       app_id: input.appId as `app_${string}`,
       action: input.action,
       rp_context: input.rpContext,
-      allow_legacy_proofs: false,
+      allow_legacy_proofs: true,
       environment: input.environment,
     }).preset(proofOfHuman({ signal: input.signal }));
   } finally {

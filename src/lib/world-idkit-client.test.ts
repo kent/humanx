@@ -51,7 +51,7 @@ describe("World IDKit client", () => {
     Reflect.deleteProperty(window, "__veripostAllowNativeWorldIdkitVerifyUntil");
   });
 
-  it("does not require optional World App user-presence metadata for native proof requests", async () => {
+  it("allows legacy proof fallback without requiring optional user-presence metadata", async () => {
     idkitRequestMock.mockReturnValueOnce({
       preset: vi.fn(async () => ({
         connectorURI: "",
@@ -81,7 +81,7 @@ describe("World IDKit client", () => {
     const requestConfig = idkitRequestMock.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(requestConfig).not.toHaveProperty("require_user_presence");
     expect(idkitRequestMock).toHaveBeenCalledWith(expect.objectContaining({
-      allow_legacy_proofs: false,
+      allow_legacy_proofs: true,
       environment: "production",
     }));
   });

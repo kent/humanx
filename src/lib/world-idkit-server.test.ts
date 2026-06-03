@@ -46,6 +46,24 @@ function idkitResult(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function legacyIdkitResult(overrides: Record<string, unknown> = {}) {
+  return {
+    protocol_version: "3.0",
+    nonce: "0x2222222222222222222222222222222222222222222222222222222222222222",
+    action: config.action,
+    environment: config.environment,
+    user_presence_completed: true,
+    responses: [{
+      identifier: "proof_of_human",
+      signal_hash: hashSignal(signal),
+      nullifier,
+      proof: "0x1234",
+      merkle_root: "0x5678",
+    }],
+    ...overrides,
+  };
+}
+
 describe("World IDKit server helpers", () => {
   it("creates signed RP context without exposing the signing key", () => {
     const rpContext = createWorldIdKitRpContext(config);
@@ -138,21 +156,26 @@ describe("World IDKit server helpers", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("rejects legacy World ID proof versions before calling the World verifier", async () => {
-    const fetcher = vi.fn();
+  it("accepts legacy World ID proof payloads through the World verifier fallback", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void input;
+      void init;
+      return successfulVerifierResponse();
+    });
 
-    await expect(
-      verifyWorldIdKitProof(
-        config,
-        idkitResult({
-          protocol_version: "3.0",
-        }),
-        signal,
-        { fetcher },
-      ),
-    ).rejects.toThrow();
+    const result = await verifyWorldIdKitProof(config, legacyIdkitResult(), signal, { fetcher });
 
-    expect(fetcher).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      nullifierDecimal: BigInt(nullifier).toString(10),
+      resultCode: "world_idkit_v3_proof_of_human",
+    });
+    expect(fetcher).toHaveBeenCalledOnce();
+    const call = fetcher.mock.calls[0];
+    if (!call) throw new Error("World verifier was not called.");
+    const init = call[1] as RequestInit;
+    const body = JSON.parse(String(init.body)) as { protocol_version: string; responses: Array<{ merkle_root?: string }> };
+    expect(body.protocol_version).toBe("3.0");
+    expect(body.responses[0]?.merkle_root).toBe("0x5678");
   });
 
   it("rejects failed World verifier responses", async () => {

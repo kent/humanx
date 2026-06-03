@@ -36,6 +36,21 @@ const idkitResponse = {
   }],
 };
 
+const legacyIdkitResponse = {
+  protocol_version: "3.0",
+  nonce: "0x2222222222222222222222222222222222222222222222222222222222222222",
+  action: "veripost-tweet-proof",
+  environment: "production",
+  user_presence_completed: true,
+  responses: [{
+    identifier: "proof_of_human",
+    signal_hash: "0x3333333333333333333333333333333333333333333333333333333333333333",
+    nullifier: idkitNullifier,
+    proof: "0x1234",
+    merkle_root: "0x5678",
+  }],
+};
+
 function proofRequest(body: unknown, flow = "idkit-native"): Request {
   return new Request("https://veripost.io/api/proofs", {
     method: "POST",
@@ -171,6 +186,55 @@ describe("proof route rejection diagnostics", () => {
       worldVerification: {
         verifiedAt: "2026-05-31T12:00:00.000Z",
         resultCode: "world_idkit_v4_proof_of_human",
+      },
+    }));
+  });
+
+  it("accepts legacy fallback IDKit payloads before World verifier storage", async () => {
+    process.env.NEXT_PUBLIC_WORLD_APP_ID = "app_123";
+    process.env.WORLD_ID_RP_ID = "rp_123";
+    process.env.WORLD_ID_RP_SIGNING_KEY = "1".repeat(64);
+    process.env.NEXT_PUBLIC_APP_URL = "https://veripost.io";
+    process.env.VERCEL_ENV = "production";
+    process.env.DATABASE_URL = "postgres://veripost:test@localhost:5432/veripost";
+    verifyWorldIdKitProofMock.mockResolvedValue({
+      nullifierDecimal: "123",
+      verifiedAt: "2026-05-31T12:00:00.000Z",
+      resultCode: "world_idkit_v3_proof_of_human",
+    });
+    createOrRefreshProofMock.mockResolvedValue({
+      proof: {
+        id: "vp_idkit_legacy",
+        draftText: "hello from World App",
+        createdAt: "2026-05-31T12:00:01.000Z",
+        proofCommitment: "a".repeat(64),
+      },
+      createdNew: true,
+    });
+
+    const response = await POST(
+      proofRequest({
+        draftText: "hello from World App",
+        idkitResponse: legacyIdkitResponse,
+      }),
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      proof: {
+        id: "vp_idkit_legacy",
+      },
+      createdNew: true,
+    });
+    expect(response.status).toBe(200);
+    expect(verifyWorldIdKitProofMock).toHaveBeenCalledWith(
+      expect.objectContaining({ appId: "app_123", rpId: "rp_123" }),
+      legacyIdkitResponse,
+      expect.stringMatching(/^veripost:v1:/),
+    );
+    expect(createOrRefreshProofMock).toHaveBeenCalledWith(expect.objectContaining({
+      worldVerification: {
+        verifiedAt: "2026-05-31T12:00:00.000Z",
+        resultCode: "world_idkit_v3_proof_of_human",
       },
     }));
   });

@@ -22,15 +22,23 @@ const idKitResponseItemSchema = z.object({
   nullifier: z.string().trim().optional(),
 }).passthrough();
 
-export const idKitResultSchema = z.object({
-  protocol_version: z.literal("4.0"),
+const idKitResultBaseSchema = z.object({
   nonce: z.string().trim().min(1).max(180),
   action: z.string().trim().min(1).max(120).optional(),
   environment: z.string().trim().min(1).max(40),
   responses: z.array(idKitResponseItemSchema).min(1).max(8),
-  session_id: z.string().trim().optional(),
   user_presence_completed: z.boolean().optional(),
 }).passthrough();
+
+export const idKitResultSchema = z.discriminatedUnion("protocol_version", [
+  idKitResultBaseSchema.extend({
+    protocol_version: z.literal("3.0"),
+  }),
+  idKitResultBaseSchema.extend({
+    protocol_version: z.literal("4.0"),
+    session_id: z.string().trim().optional(),
+  }),
+]);
 
 type ParsedIdKitResult = z.infer<typeof idKitResultSchema>;
 
@@ -112,7 +120,7 @@ function assertExpectedWorldIdKitRequest(
   parsedResponse: ParsedIdKitResult,
   signal: string,
 ): void {
-  if (parsedResponse.session_id) {
+  if ("session_id" in parsedResponse && parsedResponse.session_id) {
     throw new ApiError(400, "unsupported_world_id_proof", "Session proofs cannot create VeriPost post proofs.");
   }
 
@@ -157,7 +165,8 @@ function getVerifierPayloadCode(payload: unknown): string | undefined {
 function getWorldIdKitResultCode(parsedResponse: ParsedIdKitResult): string {
   const identifier = parsedResponse.responses[0]?.identifier.replace(/[^a-z0-9_-]/gi, "_").slice(0, 40) ||
     "unknown";
-  return `world_idkit_v4_${identifier}`;
+  const protocolVersion = parsedResponse.protocol_version === "3.0" ? "v3" : "v4";
+  return `world_idkit_${protocolVersion}_${identifier}`;
 }
 
 function hexToDecimal(value: string): string {
