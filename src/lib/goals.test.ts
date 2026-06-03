@@ -330,13 +330,13 @@ describe("GOALS.md contract", () => {
     expect(worldProofFlow).not.toContain("requestNativeWorldIdProof");
     expect(worldProofFlow).not.toContain("verifyWorldIdProof");
     expect(worldProofFlow).toContain("idkitResponse");
-    expect(worldProofFlow).toContain("require_user_presence: true");
+    expect(worldProofFlow).not.toContain("require_user_presence: true");
     expect(worldProofFlow).toContain("request.connectorURI");
     expect(worldProofFlow).toContain("external connector");
     expect(worldProofFlow).not.toContain("verifyNativeWorldIdProof");
     expect(worldProofFlow).toContain("idkit-native");
     expect(composeFlow).not.toContain("requestNativeWorldIdProof");
-    expect(worldIdKitClient).toContain("require_user_presence: true");
+    expect(worldIdKitClient).not.toContain("require_user_presence: true");
     expect(worldIdKitClient).toContain("request.connectorURI");
     expect(clientWorldProofFlow).not.toContain("/api/world/rp-signature");
     expect(clientWorldProofFlow).not.toContain("x-vercel-protection-bypass");
@@ -385,6 +385,7 @@ describe("GOALS.md contract", () => {
     expect(idkitServer).toContain("https://developer.world.org/api/v4/verify");
     expect(idkitServer).toContain("hashSignal(signal)");
     expect(idkitServer).toContain("user_presence_completed");
+    expect(idkitServer).not.toContain("world_id_presence_required");
     expect(idkitServer).toContain("createWorldIdKitRpContext");
     expect(rpContextRoute).toContain("createWorldIdKitRpContext");
     expect(rpContextRoute).toContain("allowMissingProvenanceHeader");

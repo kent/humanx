@@ -124,10 +124,6 @@ function assertExpectedWorldIdKitRequest(
     throw new ApiError(400, "world_id_environment_mismatch", "World ID proof was created for a different environment.");
   }
 
-  if (parsedResponse.user_presence_completed !== true) {
-    throw new ApiError(400, "world_id_presence_required", "World ID proof must confirm user presence.");
-  }
-
   const expectedSignalHash = hashSignal(signal).toLowerCase();
   for (const response of parsedResponse.responses) {
     if (response.signal_hash?.toLowerCase() !== expectedSignalHash) {

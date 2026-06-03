@@ -20,6 +20,13 @@ const config = {
 const signal = `veripost:v1:${"a".repeat(64)}`;
 const nullifier = "0x1111111111111111111111111111111111111111111111111111111111111111";
 
+function successfulVerifierResponse(): Response {
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { "content-type": "application/json" },
+    status: 200,
+  });
+}
+
 function idkitResult(overrides: Record<string, unknown> = {}) {
   return {
     protocol_version: "4.0",
@@ -54,10 +61,7 @@ describe("World IDKit server helpers", () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       void input;
       void init;
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { "content-type": "application/json" },
-        status: 200,
-      });
+      return successfulVerifierResponse();
     });
 
     const result = await verifyWorldIdKitProof(config, idkitResult(), signal, { fetcher });
@@ -78,6 +82,39 @@ describe("World IDKit server helpers", () => {
     const init = call[1] as RequestInit;
     const body = JSON.parse(String(init.body)) as { responses: Array<{ nullifier?: string }> };
     expect(body.responses[0]?.nullifier).toBe(nullifier);
+  });
+
+  it("accepts valid native IDKit results without the optional user-presence flag", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void input;
+      void init;
+      return successfulVerifierResponse();
+    });
+    const withoutUserPresence = idkitResult();
+    delete (withoutUserPresence as { user_presence_completed?: unknown }).user_presence_completed;
+
+    await expect(
+      verifyWorldIdKitProof(config, withoutUserPresence, signal, { fetcher }),
+    ).resolves.toMatchObject({
+      nullifierDecimal: BigInt(nullifier).toString(10),
+      resultCode: "world_idkit_v4_proof_of_human",
+    });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("accepts valid native IDKit results when user presence is reported false", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void input;
+      void init;
+      return successfulVerifierResponse();
+    });
+
+    await expect(
+      verifyWorldIdKitProof(config, idkitResult({ user_presence_completed: false }), signal, { fetcher }),
+    ).resolves.toMatchObject({
+      nullifierDecimal: BigInt(nullifier).toString(10),
+    });
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 
   it("rejects signal mismatches before calling the World verifier", async () => {

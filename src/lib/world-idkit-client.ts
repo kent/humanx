@@ -59,7 +59,6 @@ export async function requestNativeWorldIdKitProof(input: NativeWorldIdKitProofI
       rp_context: input.rpContext,
       allow_legacy_proofs: false,
       environment: input.environment,
-      require_user_presence: true,
     }).preset(proofOfHuman({ signal: input.signal }));
   } finally {
     releaseNativeVerifyAllowance();
