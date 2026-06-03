@@ -34,6 +34,8 @@ type AppConfig = {
   environment: "production" | "staging";
   hasWorldConfig: boolean;
   hasProofStorageConfig: boolean;
+  requiresXConnect?: boolean;
+  xConnectedHandle?: string | null;
   maxPostTextLength: number;
 };
 
@@ -848,11 +850,13 @@ export default function ComposeFlow() {
     () => (validation.ok ? buildXTextIntentUrl(validation.normalized) : null),
     [validation],
   );
+  const xConnectSatisfied = !config?.requiresXConnect || Boolean(config?.xConnectedHandle);
   const canPost = Boolean(
       config?.hasWorldConfig &&
       config?.hasProofStorageConfig &&
       validation.ok &&
       parsedTweet &&
+      xConnectSatisfied &&
       phase !== "loading" &&
       !busy,
   );
@@ -1043,6 +1047,27 @@ export default function ComposeFlow() {
           />
 
           {!validation.ok && phase !== "loading" ? <p className="mt-3 text-sm text-[var(--muted)]">{validation.message}</p> : null}
+
+          {config?.requiresXConnect ? (
+            <div className="mt-6 rounded-lg border border-[var(--line)] p-4">
+              <p className="text-sm font-black">Connect your X account</p>
+              {config.xConnectedHandle ? (
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Connected as <span className="font-bold">@{config.xConnectedHandle}</span>. Proofs are
+                  bound to your verified account.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    Sign in with X so the proof cryptographically attests that you control the account.
+                  </p>
+                  <a className="secondary-button mt-3 px-4 text-sm" href="/api/x-connect/start">
+                    Connect X
+                  </a>
+                </>
+              )}
+            </div>
+          ) : null}
 
           <ol className="mt-6 space-y-4">
             <li>

@@ -5,13 +5,24 @@ import {
   getRequestOrigin,
   getWorldServerConfig,
 } from "@/lib/config";
-import { errorResponse } from "@/lib/http";
+import { ApiError, errorResponse } from "@/lib/http";
 import { buildBoundSignal, issueBindingNonce } from "@/lib/proof-binding";
 import { rateLimitRequest } from "@/lib/rate-limit";
 import { assertJsonRequest, assertSameOriginRequest } from "@/lib/request-security";
 import { validatePostText } from "@/lib/text";
 import { createWorldIdKitRpContext } from "@/lib/world-idkit-server";
+import { isXOAuthConfigured, readXSessionCookie, X_SESSION_COOKIE } from "@/lib/x-oauth";
 import { verifyPostedTweet } from "@/lib/x-tweet";
+
+function readCookie(request: Request, name: string): string | undefined {
+  const raw = request.headers.get("cookie") ?? "";
+  const match = raw
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`));
+  if (!match) return undefined;
+  return decodeURIComponent(match.slice(name.length + 1));
+}
 import {
   WORLD_MINIAPP_AUTH_FLOW,
   WORLD_MINIAPP_AUTH_HEADER,
@@ -53,10 +64,27 @@ export async function POST(request: Request): Promise<NextResponse> {
       requireTextMatch: true,
     });
 
+    // When X OAuth is configured, require a verified X session and confirm the
+    // connected account actually authored the tweet — proving handle control.
+    // The OAuth-verified numeric user id is then bound into the proof signal.
+    // Without OAuth we fall back to the tweet author handle (oEmbed-only).
+    let xUserId = verifiedTweet.handle;
+    if (isXOAuthConfigured()) {
+      const session = readXSessionCookie(readCookie(request, X_SESSION_COOKIE));
+      if (!session) {
+        throw new ApiError(401, "x_not_connected", "Connect your X account before creating a proof.");
+      }
+      if (session.handle !== verifiedTweet.handle) {
+        throw new ApiError(403, "x_handle_mismatch", "That X post was not authored by your connected X account.");
+      }
+      xUserId = session.xUserId;
+    }
+
     const bindingNonce = issueBindingNonce({
       draftHash: text.draftHash,
       xHandle: verifiedTweet.handle,
       tweetId: verifiedTweet.tweetId,
+      xUserId,
     });
 
     const config = getWorldServerConfig(getRequestOrigin(request));

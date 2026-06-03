@@ -18,6 +18,10 @@ export type ProofBindingFacts = {
   draftHash: string;
   xHandle: string; // lowercased, no leading @
   tweetId: string;
+  // The X account id the handle resolves to. When X OAuth is configured this is
+  // the OAuth-verified numeric user id (proves handle control); otherwise it
+  // falls back to the handle (oEmbed-only binding).
+  xUserId: string;
 };
 
 type NoncePayload = ProofBindingFacts & {
@@ -58,6 +62,7 @@ export function issueBindingNonce(facts: ProofBindingFacts, now: number = Date.n
     draftHash: facts.draftHash,
     xHandle: facts.xHandle,
     tweetId: facts.tweetId,
+    xUserId: facts.xUserId,
     exp: now + NONCE_TTL_MS,
     rand: bytesToHex(randomBytes(12)),
   };
@@ -68,11 +73,14 @@ export function issueBindingNonce(facts: ProofBindingFacts, now: number = Date.n
 // Verifies the token's HMAC + expiry AND that its sealed facts match the facts
 // the caller independently derived from the submitted request. Throws ApiError
 // on any mismatch so callers can surface a precise rejection.
+// Verifies HMAC + expiry and that the sealed text/handle/tweet match what the
+// caller derived from the request, then returns the sealed facts (including the
+// authoritative, HMAC-protected xUserId) for storage.
 export function verifyBindingNonce(
   token: string,
-  expected: ProofBindingFacts,
+  expected: Pick<ProofBindingFacts, "draftHash" | "xHandle" | "tweetId">,
   now: number = Date.now(),
-): void {
+): ProofBindingFacts {
   const parts = token.split(".");
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
     throw new ApiError(400, "proof_binding_invalid", "Proof binding token is malformed.");
@@ -102,6 +110,13 @@ export function verifyBindingNonce(
   ) {
     throw new ApiError(400, "proof_binding_mismatch", "Proof binding does not match the submitted post.");
   }
+
+  return {
+    draftHash: payload.draftHash,
+    xHandle: payload.xHandle,
+    tweetId: payload.tweetId,
+    xUserId: payload.xUserId ?? payload.xHandle,
+  };
 }
 
 // The World ID signal. Derived solely from the (HMAC-sealed) binding nonce, so

@@ -58,7 +58,12 @@ const legacyIdkitResponse = {
 
 // Build a valid binding nonce for the canonical (draft, tweet) used in tests.
 function validBindingNonce(draft = DRAFT, handle = "kentf", tweetId = "100"): string {
-  return issueBindingNonce({ draftHash: hashDraftText(normalizePostText(draft)), xHandle: handle, tweetId });
+  return issueBindingNonce({
+    draftHash: hashDraftText(normalizePostText(draft)),
+    xHandle: handle,
+    tweetId,
+    xUserId: handle,
+  });
 }
 
 function proofRequest(body: unknown, flow = "idkit-native"): Request {

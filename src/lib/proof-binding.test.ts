@@ -6,6 +6,7 @@ const facts = {
   draftHash: "a".repeat(64),
   xHandle: "kentf",
   tweetId: "1234567890",
+  xUserId: "44196397",
 };
 
 describe("proof binding nonce", () => {
@@ -16,9 +17,9 @@ describe("proof binding nonce", () => {
     delete process.env.VERIPOST_BINDING_SECRET;
   });
 
-  it("round-trips a freshly issued nonce against matching facts", () => {
+  it("round-trips a freshly issued nonce and returns the sealed xUserId", () => {
     const token = issueBindingNonce(facts);
-    expect(() => verifyBindingNonce(token, facts)).not.toThrow();
+    expect(verifyBindingNonce(token, facts)).toEqual(facts);
   });
 
   it("derives a stable v2 signal from the token", () => {
