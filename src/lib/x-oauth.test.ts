@@ -41,7 +41,8 @@ describe("x-oauth config", () => {
 
 describe("x-oauth PKCE flow (cookieless)", () => {
   it("carries signed state in the URL and recovers a verifier that hashes to the challenge", () => {
-    const { authorizeUrl, state } = createXFlow("/", 1_000);
+    const { authorizeUrl, state, linkCode } = createXFlow("/", "link-code-abcdef0123456789", 1_000);
+    expect(linkCode).toBe("link-code-abcdef0123456789");
     const url = new URL(authorizeUrl(config));
     expect(url.origin + url.pathname).toBe("https://x.com/i/oauth2/authorize");
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
@@ -50,14 +51,15 @@ describe("x-oauth PKCE flow (cookieless)", () => {
 
     // The verifier is recovered from the signed state, and PKCE holds:
     // sha256(verifier) === the challenge sent to X. The verifier is never in the URL.
-    const { codeVerifier } = parseXFlowState(state, 1_000);
+    const { codeVerifier, linkCode: recovered } = parseXFlowState(state, 1_000);
     const challenge = createHash("sha256").update(codeVerifier).digest("base64url");
     expect(url.searchParams.get("code_challenge")).toBe(challenge);
     expect(url.toString()).not.toContain(codeVerifier);
+    expect(recovered).toBe("link-code-abcdef0123456789");
   });
 
   it("rejects expired, tampered, or missing state", () => {
-    const { state } = createXFlow("/", 1_000);
+    const { state } = createXFlow("/", "link-code-abcdef0123456789", 1_000);
     expect(() => parseXFlowState(state, 1_000 + 11 * 60 * 1000)).toThrow("expired");
     const [body] = state.split(".");
     expect(() => parseXFlowState(`${body}.bad`)).toThrow();

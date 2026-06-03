@@ -100,17 +100,19 @@ function deriveCodeVerifier(nonce: string): string {
   return createHmac("sha256", getSecret()).update(`pkce:${nonce}`).digest("base64url");
 }
 
-export function createXFlow(returnTo: string, now: number = Date.now()): {
+export function createXFlow(returnTo: string, linkCode: string, now: number = Date.now()): {
   authorizeUrl: (config: XOAuthConfig) => string;
   state: string;
+  linkCode: string;
 } {
   const nonce = base64url(randomBytes(18));
-  const body = base64url(JSON.stringify({ n: nonce, r: returnTo, exp: now + FLOW_TTL_MS }));
+  const body = base64url(JSON.stringify({ n: nonce, r: returnTo, lc: linkCode, exp: now + FLOW_TTL_MS }));
   const state = `${body}.${sign(body)}`;
   const codeVerifier = deriveCodeVerifier(nonce);
   const challenge = base64url(createHash("sha256").update(codeVerifier).digest());
   return {
     state,
+    linkCode,
     authorizeUrl: (config) => {
       const url = new URL(AUTHORIZE_URL);
       url.searchParams.set("response_type", "code");
@@ -128,24 +130,25 @@ export function createXFlow(returnTo: string, now: number = Date.now()): {
 export function parseXFlowState(
   stateParam: string | null,
   now: number = Date.now(),
-): { codeVerifier: string; returnTo: string } {
+): { codeVerifier: string; returnTo: string; linkCode: string } {
   if (!stateParam) throw new ApiError(400, "x_state_missing", "Connect-to-X verification failed. Try again.");
   const [body, mac] = stateParam.split(".");
   if (!body || !mac || !safeEqual(mac, sign(body))) {
     throw new ApiError(400, "x_state_invalid", "Connect-to-X verification failed. Try again.");
   }
-  let payload: { n?: string; r?: string; exp?: number };
+  let payload: { n?: string; r?: string; lc?: string; exp?: number };
   try {
     payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
   } catch {
     throw new ApiError(400, "x_state_invalid", "Connect-to-X verification is unreadable.");
   }
-  if (typeof payload.exp !== "number" || payload.exp < now || !payload.n) {
+  if (typeof payload.exp !== "number" || payload.exp < now || !payload.n || !payload.lc) {
     throw new ApiError(400, "x_flow_expired", "Connect-to-X session expired. Try again.");
   }
   return {
     codeVerifier: deriveCodeVerifier(payload.n),
     returnTo: typeof payload.r === "string" && payload.r.startsWith("/") ? payload.r : "/",
+    linkCode: payload.lc,
   };
 }
 

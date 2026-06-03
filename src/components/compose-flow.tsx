@@ -158,6 +158,17 @@ function worldAccountCheckErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "World ID proof check could not finish.";
 }
 
+// One-time, client-generated code that pairs this mini app session with its X
+// OAuth result (claimed via /api/x-connect/status). Generated internally (never
+// from a URL) so it can't be fixed by an attacker.
+function createXLinkCode(): string {
+  const bytes = new Uint8Array(18);
+  (globalThis.crypto ?? crypto).getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 function createWorldRuntimeDiagnosticSessionId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -519,6 +530,7 @@ export default function ComposeFlow() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [text, setText] = useState("");
   const [tweetUrl, setTweetUrl] = useState("");
+  const [xLinkCode] = useState(createXLinkCode);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isWorldApp, setIsWorldApp] = useState(false);
@@ -724,32 +736,57 @@ export default function ComposeFlow() {
     };
   }, [recordWorldRuntimeDiagnostics]);
 
-  // X OAuth often completes in a separate tab/browser context. Cookies are
-  // shared across same-origin tabs, so when the user returns to this tab we
-  // re-read /api/config to pick up the freshly-connected X account.
+  // X OAuth completes in the system browser (a different cookie jar than the
+  // World App webview). The mini app claims the result by polling with its
+  // one-time link code; the claim sets the verified-X session cookie on the
+  // webview itself. Poll whenever the mini app is visible until connected.
   useEffect(() => {
-    const refreshXConnection = () => {
-      if (document.visibilityState !== "visible") return;
-      void fetch("/api/config", { cache: "no-store", credentials: "same-origin" })
-        .then((response) => (response.ok ? response.json() : null))
-        .then((next: AppConfig | null) => {
-          if (!next) return;
-          setConfig((current) =>
-            current
-              ? { ...current, requiresXConnect: next.requiresXConnect, xConnectedHandle: next.xConnectedHandle }
-              : current,
-          );
-        })
-        .catch(() => undefined);
+    if (!config?.requiresXConnect || config.xConnectedHandle) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    let timer: number | undefined;
+
+    const poll = async () => {
+      if (cancelled || document.visibilityState !== "visible") return;
+      attempts += 1;
+      try {
+        const response = await fetch(`/api/x-connect/status?code=${encodeURIComponent(xLinkCode)}`, {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const data = response.ok ? (await response.json()) as { connected?: boolean; handle?: string } : null;
+        if (!cancelled && data?.connected && data.handle) {
+          const handle = data.handle;
+          setConfig((current) => (current ? { ...current, xConnectedHandle: handle } : current));
+          return;
+        }
+      } catch {
+        // best-effort; retry below
+      }
+      if (!cancelled && attempts < 40) {
+        timer = window.setTimeout(poll, 2_000);
+      }
     };
 
-    document.addEventListener("visibilitychange", refreshXConnection);
-    window.addEventListener("focus", refreshXConnection);
-    return () => {
-      document.removeEventListener("visibilitychange", refreshXConnection);
-      window.removeEventListener("focus", refreshXConnection);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        attempts = 0;
+        void poll();
+      }
     };
-  }, []);
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    void poll();
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [config?.requiresXConnect, config?.xConnectedHandle, xLinkCode]);
 
   useEffect(() => {
     purgeLegacyBrowserAuthState();
@@ -1091,7 +1128,10 @@ export default function ComposeFlow() {
                   <p className="mt-1 text-sm text-[var(--muted)]">
                     Sign in with X so the proof cryptographically attests that you control the account.
                   </p>
-                  <a className="secondary-button mt-3 px-4 text-sm" href="/api/x-connect/start">
+                  <a
+                    className="secondary-button mt-3 px-4 text-sm"
+                    href={`/api/x-connect/start?lc=${encodeURIComponent(xLinkCode)}`}
+                  >
                     Connect X
                   </a>
                 </>

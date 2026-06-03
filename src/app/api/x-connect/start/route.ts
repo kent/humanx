@@ -7,19 +7,26 @@ import { createXFlow, getXOAuthConfig } from "@/lib/x-oauth";
 
 export const runtime = "nodejs";
 
-// Begins X OAuth. Cookieless: PKCE state travels in the signed `state` param
-// (survives embedded-webview redirects). No-op redirect home when X OAuth is
-// not configured.
+// Same-origin entry (so the in-app navigation guard allows it) that 307s to X.
+// The mini app passes a one-time link code it generated; the OAuth result is
+// later claimed with that code via /api/x-connect/status, so the verified-X
+// session reaches the mini app webview even though OAuth runs in the system
+// browser. No cookie is involved.
 export async function GET(request: Request): Promise<NextResponse> {
   try {
-    rateLimitRequest(request, "x-connect:start", { limit: 20, windowMs: 60_000 });
+    rateLimitRequest(request, "x-connect:start", { limit: 30, windowMs: 60_000 });
     const origin = getRequestOrigin(request);
     const config = getXOAuthConfig(origin);
     if (!config) {
       return NextResponse.redirect(`${origin}/?x=unavailable`);
     }
 
-    const { authorizeUrl } = createXFlow("/");
+    const linkCode = new URL(request.url).searchParams.get("lc") ?? "";
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(linkCode)) {
+      return NextResponse.redirect(`${origin}/?x=badcode`);
+    }
+
+    const { authorizeUrl } = createXFlow("/", linkCode);
     return NextResponse.redirect(authorizeUrl(config));
   } catch (error) {
     return errorResponse(error);
