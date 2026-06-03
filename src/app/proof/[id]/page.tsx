@@ -81,7 +81,7 @@ export default async function ProofPage({ params }: PageProps) {
           </blockquote>
           <p className="mt-2 text-xs text-[var(--muted)]">
             The X post must match this text exactly. Anyone can verify at{" "}
-            <span className="mono">/api/verify?tweet=&lt;link&gt;</span>.
+            <span className="mono">/api/proof-check?tweet=&lt;link&gt;</span>.
           </p>
 
           <dl className="mt-5 grid gap-3 text-sm">
