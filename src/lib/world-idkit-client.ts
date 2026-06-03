@@ -1,6 +1,6 @@
 import {
   IDKit,
-  proofOfHuman,
+  orbLegacy,
   type IDKitResult,
   type RpContext,
 } from "@worldcoin/idkit-core";
@@ -59,7 +59,7 @@ export async function requestNativeWorldIdKitProof(input: NativeWorldIdKitProofI
       rp_context: input.rpContext,
       allow_legacy_proofs: true,
       environment: input.environment,
-    }).preset(proofOfHuman({ signal: input.signal }));
+    }).preset(orbLegacy({ signal: input.signal }));
   } finally {
     releaseNativeVerifyAllowance();
   }

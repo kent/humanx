@@ -123,9 +123,14 @@ const {
 
 async function readApiError(response: Response): Promise<string> {
   const payload = (await response.json().catch(() => null)) as
-    | { error?: { message?: string } }
+    | { error?: { code?: string; message?: string } }
     | null;
-  return payload?.error?.message ?? "Request failed.";
+  const message = payload?.error?.message ?? "Request failed.";
+  const code = payload?.error?.code;
+  // The machine code (e.g. world_id_signal_mismatch, world_id_proof_invalid) is
+  // always returned even in production, where `details` is suppressed. Surfacing it
+  // here is the only way the World proof trace can name which rejection fired.
+  return code && !message.includes(code) ? `${message} [${code}]` : message;
 }
 
 async function readWorldIdKitRpContext(response: Response): Promise<WorldIdKitRpContext> {

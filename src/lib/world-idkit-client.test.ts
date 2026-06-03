@@ -3,8 +3,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const idkitRequestMock = vi.hoisted(() => vi.fn());
-const proofOfHumanMock = vi.hoisted(() => vi.fn((input: unknown) => ({
-  credential_type: "proof_of_human",
+const orbLegacyMock = vi.hoisted(() => vi.fn((input: unknown) => ({
+  credential_type: "orb_legacy",
   input,
 })));
 
@@ -12,30 +12,29 @@ vi.mock("@worldcoin/idkit-core", () => ({
   IDKit: {
     request: idkitRequestMock,
   },
-  proofOfHuman: proofOfHumanMock,
+  orbLegacy: orbLegacyMock,
 }));
 
 import { requestNativeWorldIdKitProof } from "@/lib/world-idkit-client";
 
 const idkitResult = {
-  protocol_version: "4.0",
+  protocol_version: "3.0",
   nonce: "0x2222222222222222222222222222222222222222222222222222222222222222",
   action: "veripost-tweet-proof",
   environment: "production",
   responses: [{
-    identifier: "proof_of_human",
+    identifier: "orb",
     signal_hash: "0x3333333333333333333333333333333333333333333333333333333333333333",
     nullifier: "0x1111111111111111111111111111111111111111111111111111111111111111",
-    proof: ["0x1", "0x2", "0x3", "0x4", "0x5"],
-    issuer_schema_id: 1,
-    expires_at_min: 1_800_000_000,
+    proof: "0x" + "1".repeat(512),
+    merkle_root: "0x4444444444444444444444444444444444444444444444444444444444444444",
   }],
 };
 
 describe("World IDKit client", () => {
   beforeEach(() => {
     idkitRequestMock.mockReset();
-    proofOfHumanMock.mockClear();
+    orbLegacyMock.mockClear();
     Object.defineProperty(window, "WorldApp", {
       configurable: true,
       value: {
