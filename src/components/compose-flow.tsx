@@ -724,6 +724,33 @@ export default function ComposeFlow() {
     };
   }, [recordWorldRuntimeDiagnostics]);
 
+  // X OAuth often completes in a separate tab/browser context. Cookies are
+  // shared across same-origin tabs, so when the user returns to this tab we
+  // re-read /api/config to pick up the freshly-connected X account.
+  useEffect(() => {
+    const refreshXConnection = () => {
+      if (document.visibilityState !== "visible") return;
+      void fetch("/api/config", { cache: "no-store", credentials: "same-origin" })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((next: AppConfig | null) => {
+          if (!next) return;
+          setConfig((current) =>
+            current
+              ? { ...current, requiresXConnect: next.requiresXConnect, xConnectedHandle: next.xConnectedHandle }
+              : current,
+          );
+        })
+        .catch(() => undefined);
+    };
+
+    document.addEventListener("visibilitychange", refreshXConnection);
+    window.addEventListener("focus", refreshXConnection);
+    return () => {
+      document.removeEventListener("visibilitychange", refreshXConnection);
+      window.removeEventListener("focus", refreshXConnection);
+    };
+  }, []);
+
   useEffect(() => {
     purgeLegacyBrowserAuthState();
 
