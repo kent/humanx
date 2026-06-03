@@ -15,7 +15,6 @@ const SCOPES = ["tweet.read", "tweet.write", "users.read"];
 const SESSION_TTL_MS = 60 * 60 * 1000;
 const FLOW_TTL_MS = 10 * 60 * 1000;
 export const X_SESSION_COOKIE = "vp_x_session";
-export const X_FLOW_COOKIE = "vp_x_flow";
 
 export type XOAuthConfig = {
   clientId: string;
@@ -91,22 +90,28 @@ function decryptToken(value: string): string | null {
 
 // --- PKCE + signed flow state ---
 
-export type XFlowState = { state: string; codeVerifier: string; returnTo: string };
+// Cookieless flow: everything needed at the callback is carried in the signed
+// `state` parameter, which round-trips through X. The PKCE code_verifier is
+// derived deterministically from the state nonce + server secret, so it is
+// never placed in a URL (X only ever sees the challenge) and no cookie is
+// needed — which is essential inside embedded webviews that drop redirect
+// cookies. The HMAC signature on `state` provides CSRF protection.
+function deriveCodeVerifier(nonce: string): string {
+  return createHmac("sha256", getSecret()).update(`pkce:${nonce}`).digest("base64url");
+}
 
 export function createXFlow(returnTo: string, now: number = Date.now()): {
-  flow: XFlowState;
   authorizeUrl: (config: XOAuthConfig) => string;
-  cookieValue: string;
+  state: string;
 } {
-  const state = base64url(randomBytes(24));
-  const codeVerifier = base64url(randomBytes(48));
-  const flow: XFlowState = { state, codeVerifier, returnTo };
-  const body = base64url(JSON.stringify({ ...flow, exp: now + FLOW_TTL_MS }));
+  const nonce = base64url(randomBytes(18));
+  const body = base64url(JSON.stringify({ n: nonce, r: returnTo, exp: now + FLOW_TTL_MS }));
+  const state = `${body}.${sign(body)}`;
+  const codeVerifier = deriveCodeVerifier(nonce);
+  const challenge = base64url(createHash("sha256").update(codeVerifier).digest());
   return {
-    flow,
-    cookieValue: `${body}.${sign(body)}`,
+    state,
     authorizeUrl: (config) => {
-      const challenge = base64url(createHash("sha256").update(codeVerifier).digest());
       const url = new URL(AUTHORIZE_URL);
       url.searchParams.set("response_type", "code");
       url.searchParams.set("client_id", config.clientId);
@@ -120,22 +125,28 @@ export function createXFlow(returnTo: string, now: number = Date.now()): {
   };
 }
 
-export function parseXFlowCookie(value: string | undefined, now: number = Date.now()): XFlowState {
-  if (!value) throw new ApiError(400, "x_flow_missing", "Connect-to-X session expired. Try again.");
-  const [body, mac] = value.split(".");
+export function parseXFlowState(
+  stateParam: string | null,
+  now: number = Date.now(),
+): { codeVerifier: string; returnTo: string } {
+  if (!stateParam) throw new ApiError(400, "x_state_missing", "Connect-to-X verification failed. Try again.");
+  const [body, mac] = stateParam.split(".");
   if (!body || !mac || !safeEqual(mac, sign(body))) {
-    throw new ApiError(400, "x_flow_invalid", "Connect-to-X session is invalid.");
+    throw new ApiError(400, "x_state_invalid", "Connect-to-X verification failed. Try again.");
   }
-  let payload: XFlowState & { exp: number };
+  let payload: { n?: string; r?: string; exp?: number };
   try {
     payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
   } catch {
-    throw new ApiError(400, "x_flow_invalid", "Connect-to-X session is unreadable.");
+    throw new ApiError(400, "x_state_invalid", "Connect-to-X verification is unreadable.");
   }
-  if (typeof payload.exp !== "number" || payload.exp < now) {
+  if (typeof payload.exp !== "number" || payload.exp < now || !payload.n) {
     throw new ApiError(400, "x_flow_expired", "Connect-to-X session expired. Try again.");
   }
-  return { state: payload.state, codeVerifier: payload.codeVerifier, returnTo: payload.returnTo };
+  return {
+    codeVerifier: deriveCodeVerifier(payload.n),
+    returnTo: typeof payload.r === "string" && payload.r.startsWith("/") ? payload.r : "/",
+  };
 }
 
 // --- Verified-X session cookie (handle + encrypted access token) ---
@@ -263,10 +274,4 @@ export async function postTweetAsUser(
     throw new ApiError(502, "x_post_failed", "X did not return the published post id.");
   }
   return { tweetId: payload.data.id };
-}
-
-export function assertXState(expected: string, received: string | null): void {
-  if (!received || !safeEqual(expected, received)) {
-    throw new ApiError(400, "x_state_mismatch", "Connect-to-X verification failed. Try again.");
-  }
 }

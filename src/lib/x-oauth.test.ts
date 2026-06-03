@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createHash } from "node:crypto";
+
 import {
-  assertXState,
   createXFlow,
   createXSessionCookie,
   exchangeXCodeForAccount,
   getXOAuthConfig,
-  parseXFlowCookie,
+  parseXFlowState,
   postTweetAsUser,
   readXSessionCookie,
 } from "@/lib/x-oauth";
@@ -38,31 +39,29 @@ describe("x-oauth config", () => {
   });
 });
 
-describe("x-oauth PKCE flow", () => {
-  it("builds an authorize URL with a S256 challenge and round-trips the flow cookie", () => {
-    const { authorizeUrl, cookieValue, flow } = createXFlow("/", 1_000);
+describe("x-oauth PKCE flow (cookieless)", () => {
+  it("carries signed state in the URL and recovers a verifier that hashes to the challenge", () => {
+    const { authorizeUrl, state } = createXFlow("/", 1_000);
     const url = new URL(authorizeUrl(config));
     expect(url.origin + url.pathname).toBe("https://x.com/i/oauth2/authorize");
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-    expect(url.searchParams.get("state")).toBe(flow.state);
+    expect(url.searchParams.get("state")).toBe(state);
     expect(url.searchParams.get("client_id")).toBe("test-client");
 
-    const parsed = parseXFlowCookie(cookieValue, 1_000);
-    expect(parsed.state).toBe(flow.state);
-    expect(parsed.codeVerifier).toBe(flow.codeVerifier);
+    // The verifier is recovered from the signed state, and PKCE holds:
+    // sha256(verifier) === the challenge sent to X. The verifier is never in the URL.
+    const { codeVerifier } = parseXFlowState(state, 1_000);
+    const challenge = createHash("sha256").update(codeVerifier).digest("base64url");
+    expect(url.searchParams.get("code_challenge")).toBe(challenge);
+    expect(url.toString()).not.toContain(codeVerifier);
   });
 
-  it("rejects an expired or tampered flow cookie", () => {
-    const { cookieValue } = createXFlow("/", 1_000);
-    expect(() => parseXFlowCookie(cookieValue, 1_000 + 11 * 60 * 1000)).toThrow("expired");
-    const [body] = cookieValue.split(".");
-    expect(() => parseXFlowCookie(`${body}.bad`)).toThrow("invalid");
-  });
-
-  it("asserts the returned state matches", () => {
-    expect(() => assertXState("abc", "abc")).not.toThrow();
-    expect(() => assertXState("abc", "xyz")).toThrow("verification failed");
-    expect(() => assertXState("abc", null)).toThrow("verification failed");
+  it("rejects expired, tampered, or missing state", () => {
+    const { state } = createXFlow("/", 1_000);
+    expect(() => parseXFlowState(state, 1_000 + 11 * 60 * 1000)).toThrow("expired");
+    const [body] = state.split(".");
+    expect(() => parseXFlowState(`${body}.bad`)).toThrow();
+    expect(() => parseXFlowState(null)).toThrow();
   });
 });
 

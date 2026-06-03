@@ -4,19 +4,18 @@ import { getRequestOrigin } from "@/lib/config";
 import { errorResponse } from "@/lib/http";
 import { rateLimitRequest } from "@/lib/rate-limit";
 import {
-  assertXState,
   createXSessionCookie,
   exchangeXCodeForAccount,
   getXOAuthConfig,
-  parseXFlowCookie,
-  X_FLOW_COOKIE,
+  parseXFlowState,
   X_SESSION_COOKIE,
 } from "@/lib/x-oauth";
 
 export const runtime = "nodejs";
 
-// Completes X OAuth: verifies PKCE state, exchanges the code for the verified
-// account, and stores a short-lived signed verified-X session cookie.
+// Completes X OAuth: verifies the signed PKCE state (CSRF + recovers the
+// derived code_verifier), exchanges the code, and stores a short-lived signed
+// verified-X session cookie. No flow cookie required.
 export async function GET(request: Request): Promise<NextResponse> {
   const origin = getRequestOrigin(request);
   try {
@@ -28,22 +27,14 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
-    const cookieHeader = request.headers.get("cookie") ?? "";
-    const flowCookie = cookieHeader
-      .split(";")
-      .map((part) => part.trim())
-      .find((part) => part.startsWith(`${X_FLOW_COOKIE}=`))
-      ?.slice(X_FLOW_COOKIE.length + 1);
-
-    const flow = parseXFlowCookie(flowCookie ? decodeURIComponent(flowCookie) : undefined);
-    assertXState(flow.state, url.searchParams.get("state"));
+    const { codeVerifier, returnTo } = parseXFlowState(url.searchParams.get("state"));
     if (!code) {
       return NextResponse.redirect(`${origin}/?x=denied`);
     }
 
-    const account = await exchangeXCodeForAccount(config, code, flow.codeVerifier);
+    const account = await exchangeXCodeForAccount(config, code, codeVerifier);
 
-    const response = NextResponse.redirect(`${origin}${flow.returnTo.startsWith("/") ? flow.returnTo : "/"}?x=connected`);
+    const response = NextResponse.redirect(`${origin}${returnTo}?x=connected`);
     response.cookies.set(X_SESSION_COOKIE, createXSessionCookie(account), {
       httpOnly: true,
       secure: origin.startsWith("https://"),
@@ -51,7 +42,6 @@ export async function GET(request: Request): Promise<NextResponse> {
       path: "/",
       maxAge: 3600,
     });
-    response.cookies.delete(X_FLOW_COOKIE);
     return response;
   } catch (error) {
     return errorResponse(error);
